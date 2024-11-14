@@ -54,7 +54,10 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
       auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMousePosEvent(static_cast<float>(mouse_event->clientX), static_cast<float>(mouse_event->clientY));
+      imgui_io.AddMousePosEvent(
+        static_cast<float>(mouse_event->clientX),
+        static_cast<float>(mouse_event->clientY)
+      );
       return true;                                                              // the event was consumed
     }
   );
@@ -84,7 +87,10 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
       auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMousePosEvent(static_cast<float>(mouse_event->clientX), static_cast<float>(mouse_event->clientY)); // cursor has entered the window
+      imgui_io.AddMousePosEvent(
+        static_cast<float>(mouse_event->clientX),
+        static_cast<float>(mouse_event->clientY)
+      );
       return true;                                                              // the event was consumed
     }
   );
@@ -95,6 +101,32 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     [](int /*event_type*/, EmscriptenMouseEvent const */*mouse_event*/, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
       auto imgui_io{ImGui::GetIO()};
       imgui_io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);                            // cursor is not in the window
+      return true;                                                              // the event was consumed
+    }
+  );
+  emscripten_set_wheel_callback(
+    EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                           // target - WINDOW doesn't produce mouseenter events
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenWheelEvent const *wheel_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_WHEEL
+      float scale{1.0f};
+      switch(wheel_event->deltaMode) {
+      case DOM_DELTA_PIXEL:                                                     // scrolling in pixels
+        scale = 1.0f / 100.0f;
+        break;
+      case DOM_DELTA_LINE:                                                      // scrolling by lines
+        scale = 1.0f / 3.0f;
+        break;
+      case DOM_DELTA_PAGE:                                                      // scrolling by pages
+        scale = 80.0f;
+        break;
+      }
+      // TODO: make scrolling speeds configurable
+      auto imgui_io{ImGui::GetIO()};
+      imgui_io.AddMouseWheelEvent(
+        -static_cast<float>(wheel_event->deltaX) * scale,
+        -static_cast<float>(wheel_event->deltaY) * scale
+      );
       return true;                                                              // the event was consumed
     }
   );
