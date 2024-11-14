@@ -78,6 +78,26 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
       return true;                                                              // the event was consumed
     }
   );
+  emscripten_set_mouseenter_callback(
+    EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                           // target - WINDOW doesn't produce mouseenter events
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
+      auto imgui_io{ImGui::GetIO()};
+      imgui_io.AddMousePosEvent(static_cast<float>(mouse_event->clientX), static_cast<float>(mouse_event->clientY)); // cursor has entered the window
+      return true;                                                              // the event was consumed
+    }
+  );
+  emscripten_set_mouseleave_callback(
+    EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                           // target - WINDOW doesn't produce mouseenter events
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenMouseEvent const */*mouse_event*/, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
+      auto imgui_io{ImGui::GetIO()};
+      imgui_io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);                            // cursor is not in the window
+      return true;                                                              // the event was consumed
+    }
+  );
 
 }
 
