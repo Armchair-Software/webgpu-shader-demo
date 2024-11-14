@@ -1,6 +1,7 @@
 #include <iostream>
 #include <boost/throw_exception.hpp>
 #include <emscripten.h>
+#include <emscripten/html5.h>
 //#include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_wgpu.h>
@@ -45,6 +46,39 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
   /// Any additional initialisation that needs to occur after WebGPU has been initialised
   //ImGui_ImplGlfw_InitForOther(m_window, true);
   ImGui_ImplWGPU_Init(&imgui_wgpu_info);
+
+  // TODO: move these into new dedicated ImGUI back-end
+  emscripten_set_mousemove_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
+      auto imgui_io{ImGui::GetIO()};
+      imgui_io.AddMousePosEvent(static_cast<float>(mouse_event->clientX), static_cast<float>(mouse_event->clientY));
+      return true;                                                              // the event was consumed
+    }
+  );
+  emscripten_set_mousedown_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
+      auto imgui_io{ImGui::GetIO()};
+      imgui_io.AddMouseButtonEvent(mouse_event->button, true);                  // button, down
+      return true;                                                              // the event was consumed
+    }
+  );
+  emscripten_set_mouseup_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEUP
+      auto imgui_io{ImGui::GetIO()};
+      imgui_io.AddMouseButtonEvent(mouse_event->button, false);                 // button, up
+      return true;                                                              // the event was consumed
+    }
+  );
+
 }
 
 void top_level::draw() const {
