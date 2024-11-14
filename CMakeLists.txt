@@ -133,7 +133,14 @@ add_executable(client
   logstorm/sink/console.cpp
   logstorm/timestamp.cpp
   # 3rd party libraries:
-  #TODO
+  include/imgui/imgui.cpp
+  include/imgui/imgui_demo.cpp
+  include/imgui/imgui_draw.cpp
+  include/imgui/imgui_freetype.cpp
+  include/imgui/imgui_impl_wgpu.cpp
+  include/imgui/imgui_stdlib.cpp
+  include/imgui/imgui_tables.cpp
+  include/imgui/imgui_widgets.cpp
 )
 
 target_compile_options(client PRIVATE

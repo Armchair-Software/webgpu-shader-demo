@@ -7,6 +7,7 @@
 #include <emscripten.h>
 #include <emscripten/html5.h>
 #include <emscripten/val.h>
+#include <imgui/imgui_impl_wgpu.h>
 #include <magic_enum/magic_enum.hpp>
 #include "vertex.h"
 #include "triangle_index.h"
@@ -93,24 +94,6 @@ webgpu_renderer::webgpu_renderer(logstorm::manager &this_logger)
   /// Construct a WebGPU renderer and populate those members that don't require delayed init
   if(!webgpu.instance) throw std::runtime_error{"Could not initialize WebGPU"};
 
-  // create a surface
-  {
-    wgpu::SurfaceDescriptorFromCanvasHTMLSelector surface_descriptor_from_canvas;
-    surface_descriptor_from_canvas.selector = "#canvas";
-
-    wgpu::SurfaceDescriptor surface_descriptor{
-      .nextInChain{&surface_descriptor_from_canvas},
-      .label{"Canvas surface"},
-    };
-    webgpu.surface = webgpu.instance.CreateSurface(&surface_descriptor);
-  }
-  if(!webgpu.surface) throw std::runtime_error{"Could not create WebGPU surface"};
-}
-
-void webgpu_renderer::init(std::function<void()> &&this_postinit_callback, std::function<void()> &&this_main_loop_callback) {
-  /// Initialise the WebGPU system
-  postinit_callback = this_postinit_callback;
-  main_loop_callback = this_main_loop_callback;
   /**
   // TODO: move this to a window init
   if(glfwInit() != GLFW_TRUE) {                                                 // initialise the opengl window
@@ -130,8 +113,8 @@ void webgpu_renderer::init(std::function<void()> &&this_postinit_callback, std::
   window.viewport_size.assign(emscripten::val::global("window")["innerWidth"].as<unsigned int>(),
                               emscripten::val::global("window")["innerHeight"].as<unsigned int>());
   window.device_pixel_ratio = emscripten::val::global("window")["devicePixelRatio"].as<float>(); // query device pixel ratio using JS
-  logger << "render::window: Viewport size: " << window.viewport_size << " (device pixels: approx " << static_cast<vec2f>(window.viewport_size) * window.device_pixel_ratio << ")";
-  logger << "render::window: Device pixel ratio: " << window.device_pixel_ratio << " canvas pixels to 1 device pixel (" << static_cast<unsigned int>(std::round(100.0f * window.device_pixel_ratio)) << "% zoom)";
+  logger << "WebGPU: Viewport size: " << window.viewport_size << " (device pixels: approx " << static_cast<vec2f>(window.viewport_size) * window.device_pixel_ratio << ")";
+  logger << "WebGPU: Device pixel ratio: " << window.device_pixel_ratio << " canvas pixels to 1 device pixel (" << static_cast<unsigned int>(std::round(100.0f * window.device_pixel_ratio)) << "% zoom)";
 
   /**
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -147,6 +130,26 @@ void webgpu_renderer::init(std::function<void()> &&this_postinit_callback, std::
 
   glfwSetWindowUserPointer(window.glfw_window, this);                           // set callback userdata
   **/
+
+  // create a surface
+  {
+    wgpu::SurfaceDescriptorFromCanvasHTMLSelector surface_descriptor_from_canvas;
+    surface_descriptor_from_canvas.selector = "#canvas";
+
+    wgpu::SurfaceDescriptor surface_descriptor{
+      .nextInChain{&surface_descriptor_from_canvas},
+      .label{"Canvas surface"},
+    };
+    webgpu.surface = webgpu.instance.CreateSurface(&surface_descriptor);
+  }
+  if(!webgpu.surface) throw std::runtime_error{"Could not create WebGPU surface"};
+}
+
+void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postinit_callback, std::function<void()> &&this_main_loop_callback) {
+  /// Initialise the WebGPU system
+  postinit_callback = this_postinit_callback;
+  main_loop_callback = this_main_loop_callback;
+
   {
     // request an adapter
     wgpu::RequestAdapterOptions adapter_request_options{
@@ -316,7 +319,7 @@ void webgpu_renderer::init(std::function<void()> &&this_postinit_callback, std::
           wgpu::Limits required{
             .maxTextureDimension2D{3840},
             .maxTextureArrayLayers{1},
-            .maxBindGroups{1},
+            .maxBindGroups{2},
             .maxUniformBuffersPerShaderStage{1},
             .maxUniformBufferBindingSize{16 * 4},
             .maxVertexBuffers{1},
@@ -522,8 +525,6 @@ void webgpu_renderer::init(std::function<void()> &&this_postinit_callback, std::
 
 void webgpu_renderer::init_swapchain() {
   /// Create or recreate the swapchain for the current viewport size
-  logger << "WebGPU creating swapchain";
-
   wgpu::SwapChainDescriptor swapchain_descriptor{
     .label{"Swapchain 1"},
     .usage{wgpu::TextureUsage::RenderAttachment},
@@ -538,7 +539,6 @@ void webgpu_renderer::init_swapchain() {
 void webgpu_renderer::init_depth_texture() {
   /// Create or recreate the depth buffer and its texture view
   {
-    constexpr auto depth_texture_format{wgpu::TextureFormat::Depth24Plus};
     wgpu::TextureDescriptor depth_texture_descriptor{
       .label{"Depth texture 1"},
       .usage{wgpu::TextureUsage::RenderAttachment},
@@ -548,16 +548,16 @@ void webgpu_renderer::init_depth_texture() {
         window.viewport_size.y,
         1
       },
-      .format{wgpu::TextureFormat::Depth24Plus},
+      .format{webgpu.depth_texture_format},
       .viewFormatCount{1},
-      .viewFormats{&depth_texture_format},
+      .viewFormats{&webgpu.depth_texture_format},
     };
     webgpu.depth_texture = webgpu.device.CreateTexture(&depth_texture_descriptor);
   }
   {
     wgpu::TextureViewDescriptor depth_texture_view_descriptor{
       .label{"Depth texture view 1"},
-      .format{wgpu::TextureFormat::Depth24Plus},
+      .format{webgpu.depth_texture_format},
       .dimension{wgpu::TextureViewDimension::e2D},
       .mipLevelCount{1},
       .arrayLayerCount{1},
@@ -581,7 +581,7 @@ void webgpu_renderer::wait_to_configure_loop() {
 
   if(postinit_callback) {
     logger << "WebGPU: Configuration complete, running post-init tasks";
-    postinit_callback();                                                        // perform any user-provided post-init tasks before launching the main loop
+    postinit_callback(webgpu);                                                  // perform any user-provided post-init tasks before launching the main loop
   }
 
   logger << "WebGPU: Launching main loop";
@@ -607,6 +607,7 @@ void webgpu_renderer::configure() {
     webgpu.surface.Configure(&surface_configuration);
   }
 
+  logger << "WebGPU creating swapchain";
   init_swapchain();
 
   logger << "WebGPU acquiring queue";
@@ -730,7 +731,10 @@ void webgpu_renderer::configure() {
     webgpu.pipeline = webgpu.device.CreateRenderPipeline(&render_pipeline_descriptor);
   }
 
+  logger << "WebGPU creating depth texture";
   init_depth_texture();
+
+  update_imgui_size();
 
   emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false,   // target, userdata, use_capture, callback
     ([](int /*event_type*/, EmscriptenUiEvent const *event, void *data) {       // event_type == EMSCRIPTEN_EVENT_RESIZE
@@ -740,9 +744,17 @@ void webgpu_renderer::configure() {
 
       renderer.init_swapchain();
       renderer.init_depth_texture();
+      renderer.update_imgui_size();
       return true;
     })
   );
+}
+
+void webgpu_renderer::update_imgui_size() {
+  /// Update ImGUI display size and frame buffer scale from current window values
+  auto &imgui_io{ImGui::GetIO()};
+  imgui_io.DisplaySize = window.viewport_size;
+  imgui_io.DisplayFramebufferScale = {window.device_pixel_ratio, window.device_pixel_ratio}; // = framebuffer_size / window_size
 }
 
 void webgpu_renderer::draw() {
@@ -881,6 +893,8 @@ void webgpu_renderer::draw() {
       render_pass_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
       render_pass_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
       render_pass_encoder.DrawIndexed(index_data.size() * decltype(index_data)::value_type::size()); // indexCount, instanceCount = 1, firstIndex = 0, baseVertex = 0, firstInstance = 0
+
+      ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), render_pass_encoder.Get()); // render the outstanding GUI draw data
 
       // TODO: add timestamp query: https://eliemichel.github.io/LearnWebGPU/advanced-techniques/benchmarking/time.html
       render_pass_encoder.End();
