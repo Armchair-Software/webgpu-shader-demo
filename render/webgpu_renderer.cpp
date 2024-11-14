@@ -88,14 +88,29 @@ std::string enum_wgpu_name(Tcpp enum_in) {
 
 }
 
-webgpu_renderer::webgpu_renderer(logstorm::manager &this_logger, std::function<void()> &&this_main_loop_callback)
-  : logger{this_logger},
-    main_loop_callback{this_main_loop_callback} {
-  init();
+webgpu_renderer::webgpu_renderer(logstorm::manager &this_logger)
+  : logger{this_logger} {
+  /// Construct a WebGPU renderer and populate those members that don't require delayed init
+  if(!webgpu.instance) throw std::runtime_error{"Could not initialize WebGPU"};
+
+  // create a surface
+  {
+    wgpu::SurfaceDescriptorFromCanvasHTMLSelector surface_descriptor_from_canvas;
+    surface_descriptor_from_canvas.selector = "#canvas";
+
+    wgpu::SurfaceDescriptor surface_descriptor{
+      .nextInChain{&surface_descriptor_from_canvas},
+      .label{"Canvas surface"},
+    };
+    webgpu.surface = webgpu.instance.CreateSurface(&surface_descriptor);
+  }
+  if(!webgpu.surface) throw std::runtime_error{"Could not create WebGPU surface"};
 }
 
-void webgpu_renderer::init() {
+void webgpu_renderer::init(std::function<void()> &&this_postinit_callback, std::function<void()> &&this_main_loop_callback) {
   /// Initialise the WebGPU system
+  postinit_callback = this_postinit_callback;
+  main_loop_callback = this_main_loop_callback;
   /**
   // TODO: move this to a window init
   if(glfwInit() != GLFW_TRUE) {                                                 // initialise the opengl window
@@ -133,30 +148,13 @@ void webgpu_renderer::init() {
   glfwSetWindowUserPointer(window.glfw_window, this);                           // set callback userdata
   **/
   {
-    // create a WebGPU instance
-    wgpu::Instance instance{wgpu::CreateInstance()};
-    if(!instance) throw std::runtime_error{"Could not initialize WebGPU"};
-
-    // create a surface
-    {
-      wgpu::SurfaceDescriptorFromCanvasHTMLSelector surface_descriptor_from_canvas;
-      surface_descriptor_from_canvas.selector = "#canvas";
-
-      wgpu::SurfaceDescriptor surface_descriptor{
-        .nextInChain{&surface_descriptor_from_canvas},
-        .label{"Canvas surface"},
-      };
-      webgpu.surface = instance.CreateSurface(&surface_descriptor);
-    }
-    if(!webgpu.surface) throw std::runtime_error{"Could not create WebGPU surface"};
-
     // request an adapter
     wgpu::RequestAdapterOptions adapter_request_options{
       .compatibleSurface{webgpu.surface},
       .powerPreference{wgpu::PowerPreference::HighPerformance},
     };
 
-    instance.RequestAdapter(
+    webgpu.instance.RequestAdapter(
       &adapter_request_options,
       [](WGPURequestAdapterStatus status_c, WGPUAdapterImpl *adapter_ptr, const char *message, void *data){
         /// Request adapter callback
@@ -577,10 +575,16 @@ void webgpu_renderer::wait_to_configure_loop() {
     // TODO: sensible timeout
     return;
   }
+  emscripten_cancel_main_loop();
+
   configure();
 
-  logger << "WebGPU: Entering main loop";
-  emscripten_cancel_main_loop();
+  if(postinit_callback) {
+    logger << "WebGPU: Configuration complete, running post-init tasks";
+    postinit_callback();                                                        // perform any user-provided post-init tasks before launching the main loop
+  }
+
+  logger << "WebGPU: Launching main loop";
   emscripten_set_main_loop_arg([](void *data){
     /// Main pseudo-loop waiting for initialisation to complete
     auto &renderer{*static_cast<webgpu_renderer*>(data)};
@@ -904,9 +908,6 @@ void webgpu_renderer::draw() {
 
     webgpu.queue.Submit(1, &command_buffer);
   }
-
-  // not needed for emscripten?
-  //webgpu.surface.Present();
 }
 
 }
