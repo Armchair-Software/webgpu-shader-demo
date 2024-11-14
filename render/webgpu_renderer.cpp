@@ -745,7 +745,7 @@ void webgpu_renderer::configure() {
       renderer.init_swapchain();
       renderer.init_depth_texture();
       renderer.update_imgui_size();
-      return true;
+      return true;                                                              // the event was consumed
     })
   );
 }
