@@ -87,11 +87,7 @@ void top_level::draw() const {
   //ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
 
-
-  ImGui::Begin("Hello, world!");
-  ImGui::TextUnformatted("Some text");
-  ImGui::End();
-
+  ImGui::ShowDemoWindow();
 
   ImGui::Render();                                                              // finalise draw data (actual rendering of draw data is done by the renderer later)
 }
