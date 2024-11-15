@@ -130,6 +130,26 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
       return false;                                                             // the event was not consumed
     }
   );
+  emscripten_set_keydown_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
+      auto imgui_io{ImGui::GetIO()};
+      ///imgui_io.AddKeyEvent();
+      return false;                                                             // the event was not consumed
+    }
+  );
+  emscripten_set_keyup_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
+      auto imgui_io{ImGui::GetIO()};
+      ///imgui_io.AddKeyEvent();
+      return false;                                                             // the event was not consumed
+    }
+  );
 
 }
 
