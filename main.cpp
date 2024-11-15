@@ -105,7 +105,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     }
   );
   emscripten_set_wheel_callback(
-    EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                           // target - WINDOW doesn't produce mouseenter events
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
     nullptr,                                                                    // userData
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenWheelEvent const *wheel_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_WHEEL
@@ -127,7 +127,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
         -static_cast<float>(wheel_event->deltaX) * scale,
         -static_cast<float>(wheel_event->deltaY) * scale
       );
-      return true;                                                              // the event was consumed
+      return false;                                                             // the event was not consumed
     }
   );
 
