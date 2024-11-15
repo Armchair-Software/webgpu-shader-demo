@@ -42,6 +42,147 @@ top_level::top_level(logstorm::manager &this_logger)
   //ImGui::GetIO();
 }
 
+static const std::unordered_map<std::string, ImGuiKey> emscripten_to_imgui_key_lookup{
+  {"Backquote",            ImGuiKey_GraveAccent},
+  {"Backslash",            ImGuiKey_Backslash},
+  {"BracketLeft",          ImGuiKey_LeftBracket},
+  {"BracketRight",         ImGuiKey_RightBracket},
+  {"Comma",                ImGuiKey_Comma},
+  {"Digit0",               ImGuiKey_0},
+  {"Digit1",               ImGuiKey_1},
+  {"Digit2",               ImGuiKey_2},
+  {"Digit3",               ImGuiKey_3},
+  {"Digit4",               ImGuiKey_4},
+  {"Digit5",               ImGuiKey_5},
+  {"Digit6",               ImGuiKey_6},
+  {"Digit7",               ImGuiKey_7},
+  {"Digit8",               ImGuiKey_8},
+  {"Digit9",               ImGuiKey_9},
+  {"Equal",                ImGuiKey_Equal},
+  {"IntlBackslash",        ImGuiKey_Backslash},                                 // Mapping to generic backslash
+  {"IntlRo",               ImGuiKey_Slash},                                     // Closest match for non-standard layouts
+  {"IntlYen",              ImGuiKey_Backslash},                                 // Closest match for non-standard layouts
+  {"KeyA",                 ImGuiKey_A},
+  {"KeyB",                 ImGuiKey_B},
+  {"KeyC",                 ImGuiKey_C},
+  {"KeyD",                 ImGuiKey_D},
+  {"KeyE",                 ImGuiKey_E},
+  {"KeyF",                 ImGuiKey_F},
+  {"KeyG",                 ImGuiKey_G},
+  {"KeyH",                 ImGuiKey_H},
+  {"KeyI",                 ImGuiKey_I},
+  {"KeyJ",                 ImGuiKey_J},
+  {"KeyK",                 ImGuiKey_K},
+  {"KeyL",                 ImGuiKey_L},
+  {"KeyM",                 ImGuiKey_M},
+  {"KeyN",                 ImGuiKey_N},
+  {"KeyO",                 ImGuiKey_O},
+  {"KeyP",                 ImGuiKey_P},
+  {"KeyQ",                 ImGuiKey_Q},
+  {"KeyR",                 ImGuiKey_R},
+  {"KeyS",                 ImGuiKey_S},
+  {"KeyT",                 ImGuiKey_T},
+  {"KeyU",                 ImGuiKey_U},
+  {"KeyV",                 ImGuiKey_V},
+  {"KeyW",                 ImGuiKey_W},
+  {"KeyX",                 ImGuiKey_X},
+  {"KeyY",                 ImGuiKey_Y},
+  {"KeyZ",                 ImGuiKey_Z},
+  {"Minus",                ImGuiKey_Minus},
+  {"Period",               ImGuiKey_Period},
+  {"Quote",                ImGuiKey_Apostrophe},
+  {"Semicolon",            ImGuiKey_Semicolon},
+  {"Slash",                ImGuiKey_Slash},
+
+  {"AltLeft",              ImGuiKey_LeftAlt},
+  {"AltRight",             ImGuiKey_RightAlt},
+  {"Backspace",            ImGuiKey_Backspace},
+  {"CapsLock",             ImGuiKey_CapsLock},
+  {"ContextMenu",          ImGuiKey_Menu},
+  {"ControlLeft",          ImGuiKey_LeftCtrl},
+  {"ControlRight",         ImGuiKey_RightCtrl},
+  {"Enter",                ImGuiKey_Enter},
+  {"MetaLeft",             ImGuiKey_LeftSuper},
+  {"MetaRight",            ImGuiKey_RightSuper},
+  {"ShiftLeft",            ImGuiKey_LeftShift},
+  {"ShiftRight",           ImGuiKey_RightShift},
+  {"Space",                ImGuiKey_Space},
+  {"Tab",                  ImGuiKey_Tab},
+
+  {"Delete",               ImGuiKey_Delete},
+  {"End",                  ImGuiKey_End},
+  //{"Help",                 ImGuiKey_PrintScreen},                               // Best approximation
+  {"Home",                 ImGuiKey_Home},
+  {"Insert",               ImGuiKey_Insert},
+  {"PageDown",             ImGuiKey_PageDown},
+  {"PageUp",               ImGuiKey_PageUp},
+
+  {"ArrowDown",            ImGuiKey_DownArrow},
+  {"ArrowLeft",            ImGuiKey_LeftArrow},
+  {"ArrowRight",           ImGuiKey_RightArrow},
+  {"ArrowUp",              ImGuiKey_UpArrow},
+
+  {"NumLock",              ImGuiKey_NumLock},
+  {"Numpad0",              ImGuiKey_Keypad0},
+  {"Numpad1",              ImGuiKey_Keypad1},
+  {"Numpad2",              ImGuiKey_Keypad2},
+  {"Numpad3",              ImGuiKey_Keypad3},
+  {"Numpad4",              ImGuiKey_Keypad4},
+  {"Numpad5",              ImGuiKey_Keypad5},
+  {"Numpad6",              ImGuiKey_Keypad6},
+  {"Numpad7",              ImGuiKey_Keypad7},
+  {"Numpad8",              ImGuiKey_Keypad8},
+  {"Numpad9",              ImGuiKey_Keypad9},
+  {"NumpadAdd",            ImGuiKey_KeypadAdd},
+  {"NumpadBackspace",      ImGuiKey_Backspace},                                 // No direct mapping; backspace functionality
+  //{"NumpadClear",          ImGuiKey_KeypadClear},                               // Custom-defined if needed
+  //{"NumpadClearEntry",     ImGuiKey_KeypadClear},                               // Custom-defined if needed
+  {"NumpadComma",          ImGuiKey_KeypadDecimal},                             // Closest match
+  {"NumpadDecimal",        ImGuiKey_KeypadDecimal},
+  {"NumpadDivide",         ImGuiKey_KeypadDivide},
+  {"NumpadEnter",          ImGuiKey_KeypadEnter},
+  {"NumpadEqual",          ImGuiKey_KeypadEqual},
+  {"NumpadHash",           ImGuiKey_Backslash},                                 // Mapped to # on UK keyboard
+  //{"NumpadMemoryAdd",      ImGuiKey_None},                                      // No defined mapping
+  //{"NumpadMemoryClear",    ImGuiKey_None},                                      // No defined mapping
+  //{"NumpadMemoryRecall",   ImGuiKey_None},                                      // No defined mapping
+  //{"NumpadMemoryStore",    ImGuiKey_None},                                      // No defined mapping
+  //{"NumpadMemorySubtract", ImGuiKey_None},                                      // No defined mapping
+  {"NumpadMultiply",       ImGuiKey_KeypadMultiply},
+  {"NumpadParenLeft",      ImGuiKey_LeftBracket},                               // Closest available
+  {"NumpadParenRight",     ImGuiKey_RightBracket},                              // Closest available
+  {"NumpadStar",           ImGuiKey_KeypadMultiply},                            // Same as multiply
+  {"NumpadSubtract",       ImGuiKey_KeypadSubtract},
+
+  {"Escape",               ImGuiKey_Escape},
+  {"F1",                   ImGuiKey_F1},
+  {"F2",                   ImGuiKey_F2},
+  {"F3",                   ImGuiKey_F3},
+  {"F4",                   ImGuiKey_F4},
+  {"F5",                   ImGuiKey_F5},
+  {"F6",                   ImGuiKey_F6},
+  {"F6",                   ImGuiKey_F6},
+  {"F7",                   ImGuiKey_F7},
+  {"F8",                   ImGuiKey_F8},
+  {"F9",                   ImGuiKey_F9},
+  {"F10",                  ImGuiKey_F10},
+  {"F11",                  ImGuiKey_F11},
+  {"F12",                  ImGuiKey_F12},
+  //{"Fn",                   ImGuiKey_None},                                      // No direct mapping
+  //{"FnLock",               ImGuiKey_None},                                      // No direct mapping
+  {"PrintScreen",          ImGuiKey_PrintScreen},
+  {"ScrollLock",           ImGuiKey_ScrollLock},
+  {"Pause",                ImGuiKey_Pause},
+};
+
+ImGuiKey translate_emscripten_to_imgui_key(char const* emscripten_key) __attribute__((__const__)) {
+  /// Translate an emscripten-provided browser string describing a keycode to an imgui key code
+  if(auto it{emscripten_to_imgui_key_lookup.find(emscripten_key)}; it != emscripten_to_imgui_key_lookup.end()) {
+    return it->second;
+  }
+  return ImGuiKey_None;
+}
+
 void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
   /// Any additional initialisation that needs to occur after WebGPU has been initialised
   //ImGui_ImplGlfw_InitForOther(m_window, true);
@@ -67,6 +208,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
       auto imgui_io{ImGui::GetIO()};
+      // TODO: mouse right and mouse middle are the wrong way round
       imgui_io.AddMouseButtonEvent(mouse_event->button, true);                  // button, down
       return true;                                                              // the event was consumed
     }
@@ -136,7 +278,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
       auto imgui_io{ImGui::GetIO()};
-      ///imgui_io.AddKeyEvent();
+      imgui_io.AddKeyEvent(translate_emscripten_to_imgui_key(key_event->code), true);
       return false;                                                             // the event was not consumed
     }
   );
@@ -146,11 +288,40 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
       auto imgui_io{ImGui::GetIO()};
-      ///imgui_io.AddKeyEvent();
+      imgui_io.AddKeyEvent(translate_emscripten_to_imgui_key(key_event->code), false);
       return false;                                                             // the event was not consumed
     }
   );
 
+  emscripten_set_keydown_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    this,                                                                       // userData
+    false,                                                                      // useCapture
+    [](int event_type, EmscriptenKeyboardEvent const *key_event, void *data){   // callback
+      auto &gui{*static_cast<top_level*>(data)};
+      auto &logger{gui.logger};
+      logger << "DEBUG: event_type " << event_type;
+      logger << "DEBUG: timestamp " << key_event->timestamp;
+      logger << "DEBUG: location " << key_event->location;
+      logger << "DEBUG: ctrlKey " << key_event->ctrlKey;
+      logger << "DEBUG: shiftKey " << key_event->shiftKey;
+      logger << "DEBUG: altKey " << key_event->altKey;
+      logger << "DEBUG: metaKey " << key_event->metaKey;
+      logger << "DEBUG: repeat " << key_event->repeat;
+      logger << "DEBUG: charCode " << key_event->charCode;
+      logger << "DEBUG: keyCode " << key_event->keyCode;                        // TODO: use this
+      logger << "DEBUG: which " << key_event->which;
+      logger << "DEBUG: key[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->key;
+      logger << "DEBUG: code[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->code;
+      logger << "DEBUG: charValue[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->charValue;
+      logger << "DEBUG: locale[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->locale;
+      logger << "DEBUG: key address " << reinterpret_cast<uintptr_t const>(key_event->key);
+      logger << "DEBUG: code address " << reinterpret_cast<uintptr_t const>(key_event->code);
+      logger << "DEBUG: translate_emscripten_to_imgui_key " << translate_emscripten_to_imgui_key(key_event->code);
+
+      return false;                                                             // the event was consumed
+    }
+  );
 }
 
 void top_level::draw() const {
