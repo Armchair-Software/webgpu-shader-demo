@@ -8,6 +8,7 @@
 #include <imgui/imgui_impl_wgpu.h>
 #include "logstorm/logstorm.h"
 #include "render/webgpu_renderer.h"
+#include "emscripten_browser_cursor.h"
 
 #ifdef BOOST_NO_EXCEPTIONS
 void boost::throw_exception(std::exception const & e) {
@@ -357,6 +358,63 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
   }
 }
 
+void update_cursor() {
+  /// Sync any cursor changes due to ImGUI to the browser's cursor
+
+  static emscripten_browser_cursor::cursor current_cursor{emscripten_browser_cursor::cursor::cursor_default};
+  static std::function<std::optional<emscripten_browser_cursor::cursor>()> cursor_callback;
+  // TODO: make these externally modifiable members
+
+  auto set_cursor_if_necessary{[&](emscripten_browser_cursor::cursor new_cursor){
+    if(new_cursor == current_cursor) return;
+    current_cursor = new_cursor;
+    emscripten_browser_cursor::set(new_cursor);
+  }};
+
+  //if(ImGui::GetIO().WantCaptureMouseUnlessPopupClose) {
+  if(ImGui::GetIO().WantCaptureMouse) {                                         // mouse is hovering over the gui
+    switch(ImGui::GetMouseCursor()) {
+    case ImGuiMouseCursor_Arrow:
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::cursor_default);
+      break;
+    case ImGuiMouseCursor_TextInput:                                            // When hovering over InputText, etc.
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::text);
+      break;
+    case ImGuiMouseCursor_ResizeAll:                                            // (Unused by Dear ImGui functions)
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::move);
+      break;
+    case ImGuiMouseCursor_ResizeNS:                                             // When hovering over a horizontal border
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::ns_resize);
+      break;
+    case ImGuiMouseCursor_ResizeEW:                                             // When hovering over a vertical border or a column
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::ew_resize);
+      break;
+    case ImGuiMouseCursor_ResizeNESW:                                           // When hovering over the bottom-left corner of a window
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::nesw_resize);
+      break;
+    case ImGuiMouseCursor_ResizeNWSE:                                           // When hovering over the bottom-right corner of a window
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::nwse_resize);
+      break;
+    case ImGuiMouseCursor_Hand:                                                 // (Unused by Dear ImGui functions. Use for e.g. hyperlinks)
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::pointer);
+      break;
+    case ImGuiMouseCursor_NotAllowed:                                           // When hovering something with disallowed interaction. Usually a crossed circle.
+      set_cursor_if_necessary(emscripten_browser_cursor::cursor::not_allowed);
+      break;
+    }
+  } else {                                                                      // mouse is away from the gui, hovering over some other part of the viewport
+    if(cursor_callback) {                                                       // if we have a user-provided cursor callback, try to set the cursor from that
+      if(auto cursor_opt{cursor_callback()}; cursor_opt.has_value()) {
+        set_cursor_if_necessary(*cursor_opt);
+      } else {
+        emscripten_browser_cursor::unset();
+      }
+    } else {                                                                    // otherwise just unset the cursor preference
+      emscripten_browser_cursor::unset();
+    }
+  }
+}
+
 void top_level::draw() const {
   /// Render the top level GUI
   ImGui_ImplWGPU_NewFrame();
@@ -366,6 +424,8 @@ void top_level::draw() const {
   ImGui::ShowDemoWindow();
 
   ImGui::Render();                                                              // finalise draw data (actual rendering of draw data is done by the renderer later)
+
+  update_cursor();
 }
 
 }
