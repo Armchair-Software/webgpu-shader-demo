@@ -42,7 +42,7 @@ top_level::top_level(logstorm::manager &this_logger)
   //ImGui::GetIO();
 }
 
-static const std::unordered_map<std::string, ImGuiKey> emscripten_to_imgui_key_lookup{
+static const std::unordered_map<std::string, ImGuiKey> key_translate_lookup{
   {"Backquote",            ImGuiKey_GraveAccent},
   {"Backslash",            ImGuiKey_Backslash},
   {"BracketLeft",          ImGuiKey_LeftBracket},
@@ -175,10 +175,10 @@ static const std::unordered_map<std::string, ImGuiKey> emscripten_to_imgui_key_l
   {"Pause",                ImGuiKey_Pause},
 };
 
-ImGuiKey translate_emscripten_to_imgui_key(char const* emscripten_key) __attribute__((__const__));
-ImGuiKey translate_emscripten_to_imgui_key(char const* emscripten_key) {
+ImGuiKey translate_key(char const* emscripten_key) __attribute__((__const__));
+ImGuiKey translate_key(char const* emscripten_key) {
   /// Translate an emscripten-provided browser string describing a keycode to an imgui key code
-  if(auto it{emscripten_to_imgui_key_lookup.find(emscripten_key)}; it != emscripten_to_imgui_key_lookup.end()) {
+  if(auto it{key_translate_lookup.find(emscripten_key)}; it != key_translate_lookup.end()) {
     return it->second;
   }
   return ImGuiKey_None;
@@ -279,7 +279,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
       auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddKeyEvent(translate_emscripten_to_imgui_key(key_event->code), true);
+      imgui_io.AddKeyEvent(translate_key(key_event->code), true);
       return false;                                                             // the event was not consumed
     }
   );
@@ -289,7 +289,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
       auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddKeyEvent(translate_emscripten_to_imgui_key(key_event->code), false);
+      imgui_io.AddKeyEvent(translate_key(key_event->code), false);
       return false;                                                             // the event was not consumed
     }
   );
@@ -318,7 +318,8 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
       logger << "DEBUG: locale[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->locale;
       logger << "DEBUG: key address " << reinterpret_cast<uintptr_t const>(key_event->key);
       logger << "DEBUG: code address " << reinterpret_cast<uintptr_t const>(key_event->code);
-      logger << "DEBUG: translate_emscripten_to_imgui_key " << translate_emscripten_to_imgui_key(key_event->code);
+      logger << "DEBUG: translate_emscripten_to_imgui_key " << translate_key(key_event->code);
+
 
       return false;                                                             // the event was consumed
     }
