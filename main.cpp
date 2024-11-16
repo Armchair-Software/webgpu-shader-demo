@@ -184,6 +184,15 @@ ImGuiKey translate_key(char const* emscripten_key) {
   return ImGuiKey_None;
 }
 
+constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) __attribute__((__const__));
+constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) {
+  /// Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
+  if(emscripten_button == 1) return ImGuiMouseButton_Middle;                    // 1 = middle mouse button
+  if(emscripten_button == 2) return ImGuiMouseButton_Right;                     // 2 = right mouse button
+  if(emscripten_button > ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
+  return emscripten_button;                                                     // any other button translates 1:1
+}
+
 void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
   /// Any additional initialisation that needs to occur after WebGPU has been initialised
   //ImGui_ImplGlfw_InitForOther(m_window, true);
@@ -209,8 +218,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
       auto imgui_io{ImGui::GetIO()};
-      // TODO: mouse right and mouse middle are the wrong way round
-      imgui_io.AddMouseButtonEvent(mouse_event->button, true);                  // button, down
+      imgui_io.AddMouseButtonEvent(translate_mousebutton(mouse_event->button), true); // translated button, down
       return true;                                                              // the event was consumed
     }
   );
@@ -220,7 +228,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEUP
       auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMouseButtonEvent(mouse_event->button, false);                 // button, up
+      imgui_io.AddMouseButtonEvent(translate_mousebutton(mouse_event->button), false); // translated button, up
       return true;                                                              // the event was consumed
     }
   );
