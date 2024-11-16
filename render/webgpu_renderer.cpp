@@ -734,8 +734,6 @@ void webgpu_renderer::configure() {
   logger << "WebGPU creating depth texture";
   init_depth_texture();
 
-  update_imgui_size();
-
   emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false,   // target, userdata, use_capture, callback
     ([](int /*event_type*/, EmscriptenUiEvent const *event, void *data) {       // event_type == EMSCRIPTEN_EVENT_RESIZE
       auto &renderer{*static_cast<webgpu_renderer*>(data)};
@@ -744,17 +742,9 @@ void webgpu_renderer::configure() {
 
       renderer.init_swapchain();
       renderer.init_depth_texture();
-      renderer.update_imgui_size();
       return true;                                                              // the event was consumed
     })
   );
-}
-
-void webgpu_renderer::update_imgui_size() {
-  /// Update ImGUI display size and frame buffer scale from current window values
-  auto &imgui_io{ImGui::GetIO()};
-  imgui_io.DisplaySize = window.viewport_size;
-  imgui_io.DisplayFramebufferScale = {window.device_pixel_ratio, window.device_pixel_ratio}; // = framebuffer_size / window_size
 }
 
 void webgpu_renderer::draw() {

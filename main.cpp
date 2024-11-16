@@ -2,6 +2,7 @@
 #include <boost/throw_exception.hpp>
 #include <emscripten.h>
 #include <emscripten/html5.h>
+#include <emscripten/val.h>
 //#include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_wgpu.h>
@@ -332,6 +333,28 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
       return false;                                                             // the event was consumed
     }
   );
+
+  emscripten_set_resize_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    ([](int /*event_type*/, EmscriptenUiEvent const *event, void */*data*/) {   // event_type == EMSCRIPTEN_EVENT_RESIZE
+      auto &imgui_io{ImGui::GetIO()};
+      imgui_io.DisplaySize.x = static_cast<float>(event->windowInnerWidth);
+      imgui_io.DisplaySize.y = static_cast<float>(event->windowInnerHeight);
+      return true;                                                              // the event was consumed
+    })
+  );
+
+  {
+    // set up initial display size values
+    auto &imgui_io{ImGui::GetIO()};
+    imgui_io.DisplaySize.x = emscripten::val::global("window")["innerWidth"].as<float>();
+    imgui_io.DisplaySize.y = emscripten::val::global("window")["innerHeight"].as<float>();
+    auto const device_pixel_ratio{emscripten::val::global("window")["devicePixelRatio"].as<float>()};
+    imgui_io.DisplayFramebufferScale.x = device_pixel_ratio;
+    imgui_io.DisplayFramebufferScale.y = device_pixel_ratio;
+  }
 }
 
 void top_level::draw() const {
