@@ -347,6 +347,28 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     })
   );
 
+  emscripten_set_focusin_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    ([](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSIN
+      auto &imgui_io{ImGui::GetIO()};
+      imgui_io.AddFocusEvent(true);
+      return true;                                                              // the event was consumed
+    })
+  );
+
+  emscripten_set_focusout_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    ([](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSOUT
+      auto &imgui_io{ImGui::GetIO()};
+      imgui_io.AddFocusEvent(false);
+      return true;                                                              // the event was consumed
+    })
+  );
+
   {
     // set up initial display size values
     auto &imgui_io{ImGui::GetIO()};
