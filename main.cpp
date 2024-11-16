@@ -175,7 +175,8 @@ static const std::unordered_map<std::string, ImGuiKey> emscripten_to_imgui_key_l
   {"Pause",                ImGuiKey_Pause},
 };
 
-ImGuiKey translate_emscripten_to_imgui_key(char const* emscripten_key) __attribute__((__const__)) {
+ImGuiKey translate_emscripten_to_imgui_key(char const* emscripten_key) __attribute__((__const__));
+ImGuiKey translate_emscripten_to_imgui_key(char const* emscripten_key) {
   /// Translate an emscripten-provided browser string describing a keycode to an imgui key code
   if(auto it{emscripten_to_imgui_key_lookup.find(emscripten_key)}; it != emscripten_to_imgui_key_lookup.end()) {
     return it->second;
