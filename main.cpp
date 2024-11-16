@@ -254,6 +254,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     [](int /*event_type*/, EmscriptenMouseEvent const */*mouse_event*/, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
       auto imgui_io{ImGui::GetIO()};
       imgui_io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);                            // cursor is not in the window
+      imgui_io.ClearInputKeys();                                                // clear pending input keys on mouse exit
       return true;                                                              // the event was consumed
     }
   );
@@ -354,10 +355,10 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     ([](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSIN
       auto &imgui_io{ImGui::GetIO()};
       imgui_io.AddFocusEvent(true);
+      imgui_io.ClearInputKeys();                                                // clear pending input keys on focus gain
       return true;                                                              // the event was consumed
     })
   );
-
   emscripten_set_focusout_callback(
     EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
     nullptr,                                                                    // userData
@@ -365,6 +366,7 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     ([](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSOUT
       auto &imgui_io{ImGui::GetIO()};
       imgui_io.AddFocusEvent(false);
+      imgui_io.ClearInputKeys();                                                // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
       return true;                                                              // the event was consumed
     })
   );
