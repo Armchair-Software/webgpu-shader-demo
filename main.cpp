@@ -353,6 +353,39 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
 
   // TODO: gamepad events
   // TODO: touch events
+
+
+  emscripten_set_keydown_callback(
+    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
+    this,                                                                       // userData
+    false,                                                                      // useCapture
+    [](int event_type, EmscriptenKeyboardEvent const *key_event, void *data){   // callback
+      auto &gui{*static_cast<top_level*>(data)};
+      auto &logger{gui.logger};
+      logger << "DEBUG: event_type " << event_type;
+      logger << "DEBUG: timestamp " << key_event->timestamp;
+      logger << "DEBUG: location " << key_event->location;
+      logger << "DEBUG: ctrlKey " << key_event->ctrlKey;
+      logger << "DEBUG: shiftKey " << key_event->shiftKey;
+      logger << "DEBUG: altKey " << key_event->altKey;
+      logger << "DEBUG: metaKey " << key_event->metaKey;
+      logger << "DEBUG: repeat " << key_event->repeat;
+      logger << "DEBUG: charCode " << key_event->charCode;
+      logger << "DEBUG: keyCode " << key_event->keyCode;                        // TODO: use this
+      logger << "DEBUG: which " << key_event->which;
+      logger << "DEBUG: key[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->key;
+      logger << "DEBUG: code[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->code;
+      logger << "DEBUG: charValue[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->charValue;
+      logger << "DEBUG: locale[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->locale;
+      logger << "DEBUG: key address " << reinterpret_cast<uintptr_t const>(key_event->key);
+      logger << "DEBUG: code address " << reinterpret_cast<uintptr_t const>(key_event->code);
+      logger << "DEBUG: translate_emscripten_to_imgui_key " << translate_key(key_event->code);
+
+
+      return false;                                                             // the event was consumed
+    }
+  );
+
   {
     // set up initial display size values
     auto &imgui_io{ImGui::GetIO()};
