@@ -351,6 +351,8 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     })
   );
 
+  // TODO: gamepad events
+  // TODO: touch events
   {
     // set up initial display size values
     auto &imgui_io{ImGui::GetIO()};
