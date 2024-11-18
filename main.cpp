@@ -413,25 +413,6 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     imgui_io.DisplayFramebufferScale.x = device_pixel_ratio;
     imgui_io.DisplayFramebufferScale.y = device_pixel_ratio;
   }
-
-  // WIP, note that none will appear until after a button has been pressed:
-  if(emscripten_sample_gamepad_data() == EMSCRIPTEN_RESULT_SUCCESS) {
-    logger << "Gamepad API available, sampling...";
-    int const num_gamepads{emscripten_get_num_gamepads()};
-    logger << "Gamepads available: " << num_gamepads;
-    for(int i = 0; i != num_gamepads; ++i) {
-      EmscriptenGamepadEvent gamepad_state;
-      logger << "Gamepad " << i << " status success: " << emscripten_get_gamepad_status(i, &gamepad_state);
-      logger << "Gamepad " << i << " numAxes: " << gamepad_state.numAxes;
-      logger << "Gamepad " << i << " numButtons: " << gamepad_state.numButtons;
-      logger << "Gamepad " << i << " connected: " << gamepad_state.connected;
-      logger << "Gamepad " << i << " index: " << gamepad_state.index;
-      logger << "Gamepad " << i << " id: " << gamepad_state.id;
-      logger << "Gamepad " << i << " mapping: " << gamepad_state.mapping;
-    }
-  } else {
-    logger << "Gamepad API not available";
-  }
 }
 
 void update_cursor() {
@@ -495,6 +476,25 @@ void top_level::draw() const {
   /// Render the top level GUI
   ImGui_ImplWGPU_NewFrame();
   //ImGui_ImplGlfw_NewFrame();
+
+
+  // WIP, note that none will appear until after a button has been pressed:
+  if(emscripten_sample_gamepad_data() == EMSCRIPTEN_RESULT_SUCCESS) {
+    int const num_gamepads{emscripten_get_num_gamepads()};
+    logger << "Gamepads available: " << num_gamepads;
+    for(int i = 0; i != num_gamepads; ++i) {
+      if(EmscriptenGamepadEvent gamepad_state; emscripten_get_gamepad_status(i, &gamepad_state) == EMSCRIPTEN_RESULT_SUCCESS) {
+        logger << "Gamepad " << i << " numAxes: " << gamepad_state.numAxes;
+        logger << "Gamepad " << i << " numButtons: " << gamepad_state.numButtons;
+        logger << "Gamepad " << i << " connected: " << gamepad_state.connected;
+        logger << "Gamepad " << i << " index: " << gamepad_state.index;
+        logger << "Gamepad " << i << " id: " << gamepad_state.id;
+        logger << "Gamepad " << i << " mapping: " << gamepad_state.mapping;
+      }
+    }
+  }
+
+
   ImGui::NewFrame();
 
   ImGui::ShowDemoWindow();
