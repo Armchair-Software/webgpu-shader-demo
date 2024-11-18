@@ -321,34 +321,34 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
     nullptr,                                                                    // userData
     false,                                                                      // useCapture
-    ([](int /*event_type*/, EmscriptenUiEvent const *event, void */*data*/) {   // event_type == EMSCRIPTEN_EVENT_RESIZE
+    [](int /*event_type*/, EmscriptenUiEvent const *event, void */*data*/) {   // event_type == EMSCRIPTEN_EVENT_RESIZE
       auto &imgui_io{ImGui::GetIO()};
       imgui_io.DisplaySize.x = static_cast<float>(event->windowInnerWidth);
       imgui_io.DisplaySize.y = static_cast<float>(event->windowInnerHeight);
       return true;                                                              // the event was consumed
-    })
+    }
   );
   emscripten_set_focusin_callback(
     EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
     nullptr,                                                                    // userData
     false,                                                                      // useCapture
-    ([](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSIN
+    [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSIN
       auto &imgui_io{ImGui::GetIO()};
       imgui_io.AddFocusEvent(true);
       imgui_io.ClearInputKeys();                                                // clear pending input keys on focus gain
       return true;                                                              // the event was consumed
-    })
+    }
   );
   emscripten_set_focusout_callback(
     EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
     nullptr,                                                                    // userData
     false,                                                                      // useCapture
-    ([](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSOUT
+    [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSOUT
       auto &imgui_io{ImGui::GetIO()};
       imgui_io.AddFocusEvent(false);
       imgui_io.ClearInputKeys();                                                // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
       return true;                                                              // the event was consumed
-    })
+    }
   );
 
   // TODO: gamepad events
