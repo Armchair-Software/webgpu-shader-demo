@@ -351,7 +351,25 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     }
   );
 
-  // TODO: gamepad events
+  emscripten_set_gamepadconnected_callback(
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenGamepadEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_GAMEPADCONNECTED
+      auto &imgui_io{ImGui::GetIO()};
+      // TODO
+      return true;                                                              // the event was consumed
+    }
+  );
+  emscripten_set_gamepaddisconnected_callback(
+    nullptr,                                                                    // userData
+    false,                                                                      // useCapture
+    [](int /*event_type*/, EmscriptenGamepadEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_GAMEPADDISCONNECTED
+      auto &imgui_io{ImGui::GetIO()};
+      // TODO
+      return true;                                                              // the event was consumed
+    }
+  );
+
   // TODO: touch events
 
 
@@ -394,6 +412,25 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
     auto const device_pixel_ratio{emscripten::val::global("window")["devicePixelRatio"].as<float>()};
     imgui_io.DisplayFramebufferScale.x = device_pixel_ratio;
     imgui_io.DisplayFramebufferScale.y = device_pixel_ratio;
+  }
+
+  // WIP, note that none will appear until after a button has been pressed:
+  if(emscripten_sample_gamepad_data() == EMSCRIPTEN_RESULT_SUCCESS) {
+    logger << "Gamepad API available, sampling...";
+    int const num_gamepads{emscripten_get_num_gamepads()};
+    logger << "Gamepads available: " << num_gamepads;
+    for(int i = 0; i != num_gamepads; ++i) {
+      EmscriptenGamepadEvent gamepad_state;
+      logger << "Gamepad " << i << " status success: " << emscripten_get_gamepad_status(i, &gamepad_state);
+      logger << "Gamepad " << i << " numAxes: " << gamepad_state.numAxes;
+      logger << "Gamepad " << i << " numButtons: " << gamepad_state.numButtons;
+      logger << "Gamepad " << i << " connected: " << gamepad_state.connected;
+      logger << "Gamepad " << i << " index: " << gamepad_state.index;
+      logger << "Gamepad " << i << " id: " << gamepad_state.id;
+      logger << "Gamepad " << i << " mapping: " << gamepad_state.mapping;
+    }
+  } else {
+    logger << "Gamepad API not available";
   }
 }
 
