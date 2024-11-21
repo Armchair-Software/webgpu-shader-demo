@@ -2,9 +2,9 @@
 #include <boost/throw_exception.hpp>
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <emscripten/val.h>
 //#include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
+#include <imgui/imgui_impl_emscripten.h>
 #include <imgui/imgui_impl_wgpu.h>
 #include "logstorm/logstorm.h"
 #include "render/webgpu_renderer.h"
@@ -46,331 +46,12 @@ top_level::top_level(logstorm::manager &this_logger)
   //ImGui::GetIO();
 }
 
-static const std::unordered_map<std::string, ImGuiKey> key_translate_lookup{
-  {"Backquote",            ImGuiKey_GraveAccent},
-  {"Backslash",            ImGuiKey_Backslash},
-  {"BracketLeft",          ImGuiKey_LeftBracket},
-  {"BracketRight",         ImGuiKey_RightBracket},
-  {"Comma",                ImGuiKey_Comma},
-  {"Digit0",               ImGuiKey_0},
-  {"Digit1",               ImGuiKey_1},
-  {"Digit2",               ImGuiKey_2},
-  {"Digit3",               ImGuiKey_3},
-  {"Digit4",               ImGuiKey_4},
-  {"Digit5",               ImGuiKey_5},
-  {"Digit6",               ImGuiKey_6},
-  {"Digit7",               ImGuiKey_7},
-  {"Digit8",               ImGuiKey_8},
-  {"Digit9",               ImGuiKey_9},
-  {"Equal",                ImGuiKey_Equal},
-  {"IntlBackslash",        ImGuiKey_Backslash},                                 // Mapping to generic backslash
-  {"IntlRo",               ImGuiKey_Slash},                                     // Closest match for non-standard layouts
-  {"IntlYen",              ImGuiKey_Backslash},                                 // Closest match for non-standard layouts
-  {"KeyA",                 ImGuiKey_A},
-  {"KeyB",                 ImGuiKey_B},
-  {"KeyC",                 ImGuiKey_C},
-  {"KeyD",                 ImGuiKey_D},
-  {"KeyE",                 ImGuiKey_E},
-  {"KeyF",                 ImGuiKey_F},
-  {"KeyG",                 ImGuiKey_G},
-  {"KeyH",                 ImGuiKey_H},
-  {"KeyI",                 ImGuiKey_I},
-  {"KeyJ",                 ImGuiKey_J},
-  {"KeyK",                 ImGuiKey_K},
-  {"KeyL",                 ImGuiKey_L},
-  {"KeyM",                 ImGuiKey_M},
-  {"KeyN",                 ImGuiKey_N},
-  {"KeyO",                 ImGuiKey_O},
-  {"KeyP",                 ImGuiKey_P},
-  {"KeyQ",                 ImGuiKey_Q},
-  {"KeyR",                 ImGuiKey_R},
-  {"KeyS",                 ImGuiKey_S},
-  {"KeyT",                 ImGuiKey_T},
-  {"KeyU",                 ImGuiKey_U},
-  {"KeyV",                 ImGuiKey_V},
-  {"KeyW",                 ImGuiKey_W},
-  {"KeyX",                 ImGuiKey_X},
-  {"KeyY",                 ImGuiKey_Y},
-  {"KeyZ",                 ImGuiKey_Z},
-  {"Minus",                ImGuiKey_Minus},
-  {"Period",               ImGuiKey_Period},
-  {"Quote",                ImGuiKey_Apostrophe},
-  {"Semicolon",            ImGuiKey_Semicolon},
-  {"Slash",                ImGuiKey_Slash},
-
-  {"AltLeft",              ImGuiKey_LeftAlt},
-  {"AltRight",             ImGuiKey_RightAlt},
-  {"Backspace",            ImGuiKey_Backspace},
-  {"CapsLock",             ImGuiKey_CapsLock},
-  {"ContextMenu",          ImGuiKey_Menu},
-  {"ControlLeft",          ImGuiKey_LeftCtrl},
-  {"ControlRight",         ImGuiKey_RightCtrl},
-  {"Enter",                ImGuiKey_Enter},
-  {"MetaLeft",             ImGuiKey_LeftSuper},
-  {"MetaRight",            ImGuiKey_RightSuper},
-  {"ShiftLeft",            ImGuiKey_LeftShift},
-  {"ShiftRight",           ImGuiKey_RightShift},
-  {"Space",                ImGuiKey_Space},
-  {"Tab",                  ImGuiKey_Tab},
-
-  {"Delete",               ImGuiKey_Delete},
-  {"End",                  ImGuiKey_End},
-  //{"Help",                 ImGuiKey_PrintScreen},                               // Best approximation
-  {"Home",                 ImGuiKey_Home},
-  {"Insert",               ImGuiKey_Insert},
-  {"PageDown",             ImGuiKey_PageDown},
-  {"PageUp",               ImGuiKey_PageUp},
-
-  {"ArrowDown",            ImGuiKey_DownArrow},
-  {"ArrowLeft",            ImGuiKey_LeftArrow},
-  {"ArrowRight",           ImGuiKey_RightArrow},
-  {"ArrowUp",              ImGuiKey_UpArrow},
-
-  {"NumLock",              ImGuiKey_NumLock},
-  {"Numpad0",              ImGuiKey_Keypad0},
-  {"Numpad1",              ImGuiKey_Keypad1},
-  {"Numpad2",              ImGuiKey_Keypad2},
-  {"Numpad3",              ImGuiKey_Keypad3},
-  {"Numpad4",              ImGuiKey_Keypad4},
-  {"Numpad5",              ImGuiKey_Keypad5},
-  {"Numpad6",              ImGuiKey_Keypad6},
-  {"Numpad7",              ImGuiKey_Keypad7},
-  {"Numpad8",              ImGuiKey_Keypad8},
-  {"Numpad9",              ImGuiKey_Keypad9},
-  {"NumpadAdd",            ImGuiKey_KeypadAdd},
-  {"NumpadBackspace",      ImGuiKey_Backspace},                                 // No direct mapping; backspace functionality
-  //{"NumpadClear",          ImGuiKey_KeypadClear},                               // Custom-defined if needed
-  //{"NumpadClearEntry",     ImGuiKey_KeypadClear},                               // Custom-defined if needed
-  {"NumpadComma",          ImGuiKey_KeypadDecimal},                             // Closest match
-  {"NumpadDecimal",        ImGuiKey_KeypadDecimal},
-  {"NumpadDivide",         ImGuiKey_KeypadDivide},
-  {"NumpadEnter",          ImGuiKey_KeypadEnter},
-  {"NumpadEqual",          ImGuiKey_KeypadEqual},
-  {"NumpadHash",           ImGuiKey_Backslash},                                 // Mapped to # on UK keyboard
-  //{"NumpadMemoryAdd",      ImGuiKey_None},                                      // No defined mapping
-  //{"NumpadMemoryClear",    ImGuiKey_None},                                      // No defined mapping
-  //{"NumpadMemoryRecall",   ImGuiKey_None},                                      // No defined mapping
-  //{"NumpadMemoryStore",    ImGuiKey_None},                                      // No defined mapping
-  //{"NumpadMemorySubtract", ImGuiKey_None},                                      // No defined mapping
-  {"NumpadMultiply",       ImGuiKey_KeypadMultiply},
-  {"NumpadParenLeft",      ImGuiKey_LeftBracket},                               // Closest available
-  {"NumpadParenRight",     ImGuiKey_RightBracket},                              // Closest available
-  {"NumpadStar",           ImGuiKey_KeypadMultiply},                            // Same as multiply
-  {"NumpadSubtract",       ImGuiKey_KeypadSubtract},
-
-  {"Escape",               ImGuiKey_Escape},
-  {"F1",                   ImGuiKey_F1},
-  {"F2",                   ImGuiKey_F2},
-  {"F3",                   ImGuiKey_F3},
-  {"F4",                   ImGuiKey_F4},
-  {"F5",                   ImGuiKey_F5},
-  {"F6",                   ImGuiKey_F6},
-  {"F6",                   ImGuiKey_F6},
-  {"F7",                   ImGuiKey_F7},
-  {"F8",                   ImGuiKey_F8},
-  {"F9",                   ImGuiKey_F9},
-  {"F10",                  ImGuiKey_F10},
-  {"F11",                  ImGuiKey_F11},
-  {"F12",                  ImGuiKey_F12},
-  //{"Fn",                   ImGuiKey_None},                                      // No direct mapping
-  //{"FnLock",               ImGuiKey_None},                                      // No direct mapping
-  {"PrintScreen",          ImGuiKey_PrintScreen},
-  {"ScrollLock",           ImGuiKey_ScrollLock},
-  {"Pause",                ImGuiKey_Pause},
-};
-
-ImGuiKey translate_key(char const* emscripten_key) __attribute__((__const__));
-ImGuiKey translate_key(char const* emscripten_key) {
-  /// Translate an emscripten-provided browser string describing a keycode to an imgui key code
-  if(auto it{key_translate_lookup.find(emscripten_key)}; it != key_translate_lookup.end()) {
-    return it->second;
-  }
-  return ImGuiKey_None;
-}
-
-constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) __attribute__((__const__));
-constexpr ImGuiMouseButton translate_mousebutton(unsigned short emscripten_button) {
-  /// Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
-  if(emscripten_button == 1) return ImGuiMouseButton_Middle;                    // 1 = middle mouse button
-  if(emscripten_button == 2) return ImGuiMouseButton_Right;                     // 2 = right mouse button
-  if(emscripten_button > ImGuiMouseButton_COUNT) return ImGuiMouseButton_Middle; // treat any weird clicks on unexpected buttons (button 6 upwards) as middle mouse
-  return emscripten_button;                                                     // any other button translates 1:1
-}
-
 void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
   /// Any additional initialisation that needs to occur after WebGPU has been initialised
   //ImGui_ImplGlfw_InitForOther(m_window, true);
   ImGui_ImplWGPU_Init(&imgui_wgpu_info);
 
-  // TODO: move these into new dedicated ImGUI back-end
-  emscripten_set_mousemove_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEMOVE
-      auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMousePosEvent(
-        static_cast<float>(mouse_event->clientX),
-        static_cast<float>(mouse_event->clientY)
-      );
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_mousedown_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEDOWN
-      auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMouseButtonEvent(translate_mousebutton(mouse_event->button), true); // translated button, down
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_mouseup_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEUP
-      auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMouseButtonEvent(translate_mousebutton(mouse_event->button), false); // translated button, up
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_mouseenter_callback(
-    EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                           // target - WINDOW doesn't produce mouseenter events
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenMouseEvent const *mouse_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSEENTER
-      auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMousePosEvent(
-        static_cast<float>(mouse_event->clientX),
-        static_cast<float>(mouse_event->clientY)
-      );
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_mouseleave_callback(
-    EMSCRIPTEN_EVENT_TARGET_DOCUMENT,                                           // target - WINDOW doesn't produce mouseenter events
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenMouseEvent const */*mouse_event*/, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_MOUSELEAVE
-      auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);                            // cursor is not in the window
-      imgui_io.ClearInputKeys();                                                // clear pending input keys on mouse exit
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_wheel_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenWheelEvent const *wheel_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_WHEEL
-      float scale{1.0f};
-      switch(wheel_event->deltaMode) {
-      case DOM_DELTA_PIXEL:                                                     // scrolling in pixels
-        scale = 1.0f / 100.0f;
-        break;
-      case DOM_DELTA_LINE:                                                      // scrolling by lines
-        scale = 1.0f / 3.0f;
-        break;
-      case DOM_DELTA_PAGE:                                                      // scrolling by pages
-        scale = 80.0f;
-        break;
-      }
-      // TODO: make scrolling speeds configurable
-      auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddMouseWheelEvent(
-        -static_cast<float>(wheel_event->deltaX) * scale,
-        -static_cast<float>(wheel_event->deltaY) * scale
-      );
-      return false;                                                             // the event was not consumed
-    }
-  );
-  emscripten_set_keydown_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYDOWN
-      auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddKeyEvent(translate_key(key_event->code), true);
-      return false;                                                             // the event was not consumed
-    }
-  );
-  emscripten_set_keyup_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYUP
-      auto imgui_io{ImGui::GetIO()};
-      imgui_io.AddKeyEvent(translate_key(key_event->code), false);
-      return false;                                                             // the event was not consumed
-    }
-  );
-  emscripten_set_keypress_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenKeyboardEvent const *key_event, void */*data*/){ // callback, event_type == EMSCRIPTEN_EVENT_KEYPRESS
-      auto imgui_io{ImGui::GetIO()};
-      if(key_event->key == "Enter"s) return true;                               // we still receive "Enter" as a string from the keypress callback, for some reason
-      imgui_io.AddInputCharactersUTF8(key_event->key);
-      return true;                                                              // the event was not consumed
-    }
-  );
-  emscripten_set_resize_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenUiEvent const *event, void */*data*/) {   // event_type == EMSCRIPTEN_EVENT_RESIZE
-      auto &imgui_io{ImGui::GetIO()};
-      imgui_io.DisplaySize.x = static_cast<float>(event->windowInnerWidth);
-      imgui_io.DisplaySize.y = static_cast<float>(event->windowInnerHeight);
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_focusin_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSIN
-      auto &imgui_io{ImGui::GetIO()};
-      imgui_io.AddFocusEvent(true);
-      imgui_io.ClearInputKeys();                                                // clear pending input keys on focus gain
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_focusout_callback(
-    EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenFocusEvent const */*event*/, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_FOCUSOUT
-      auto &imgui_io{ImGui::GetIO()};
-      imgui_io.AddFocusEvent(false);
-      imgui_io.ClearInputKeys();                                                // clear pending input keys on focus loss - for example if you press tab to cycle to another part of the UI
-      return true;                                                              // the event was consumed
-    }
-  );
-
-  emscripten_set_gamepadconnected_callback(
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenGamepadEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_GAMEPADCONNECTED
-      auto &imgui_io{ImGui::GetIO()};
-      // TODO
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_gamepaddisconnected_callback(
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenGamepadEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_GAMEPADDISCONNECTED
-      auto &imgui_io{ImGui::GetIO()};
-      // TODO
-      return true;                                                              // the event was consumed
-    }
-  );
-
-  // TODO: touch events
+  ImGui_ImplEmscripten_Init();
 
 
   emscripten_set_keydown_callback(
@@ -397,102 +78,19 @@ void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
       logger << "DEBUG: locale[EM_HTML5_SHORT_STRING_LEN_BYTES] " << key_event->locale;
       logger << "DEBUG: key address " << reinterpret_cast<uintptr_t const>(key_event->key);
       logger << "DEBUG: code address " << reinterpret_cast<uintptr_t const>(key_event->code);
-      logger << "DEBUG: translate_emscripten_to_imgui_key " << translate_key(key_event->code);
+      //logger << "DEBUG: translate_emscripten_to_imgui_key " << translate_key(key_event->code);
 
 
       return false;                                                             // the event was consumed
     }
   );
-
-  {
-    // set up initial display size values
-    auto &imgui_io{ImGui::GetIO()};
-    imgui_io.DisplaySize.x = emscripten::val::global("window")["innerWidth"].as<float>();
-    imgui_io.DisplaySize.y = emscripten::val::global("window")["innerHeight"].as<float>();
-    auto const device_pixel_ratio{emscripten::val::global("window")["devicePixelRatio"].as<float>()};
-    imgui_io.DisplayFramebufferScale.x = device_pixel_ratio;
-    imgui_io.DisplayFramebufferScale.y = device_pixel_ratio;
-  }
-}
-
-void update_cursor() {
-  /// Sync any cursor changes due to ImGUI to the browser's cursor
-
-  static emscripten_browser_cursor::cursor current_cursor{emscripten_browser_cursor::cursor::cursor_default};
-  static std::function<std::optional<emscripten_browser_cursor::cursor>()> cursor_callback;
-  // TODO: make these externally modifiable members
-
-  auto set_cursor_if_necessary{[&](emscripten_browser_cursor::cursor new_cursor){
-    if(new_cursor == current_cursor) return;
-    current_cursor = new_cursor;
-    emscripten_browser_cursor::set(new_cursor);
-  }};
-
-  //if(ImGui::GetIO().WantCaptureMouseUnlessPopupClose) {
-  if(ImGui::GetIO().WantCaptureMouse) {                                         // mouse is hovering over the gui
-    switch(ImGui::GetMouseCursor()) {
-    case ImGuiMouseCursor_Arrow:
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::cursor_default);
-      break;
-    case ImGuiMouseCursor_TextInput:                                            // When hovering over InputText, etc.
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::text);
-      break;
-    case ImGuiMouseCursor_ResizeAll:                                            // (Unused by Dear ImGui functions)
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::move);
-      break;
-    case ImGuiMouseCursor_ResizeNS:                                             // When hovering over a horizontal border
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::ns_resize);
-      break;
-    case ImGuiMouseCursor_ResizeEW:                                             // When hovering over a vertical border or a column
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::ew_resize);
-      break;
-    case ImGuiMouseCursor_ResizeNESW:                                           // When hovering over the bottom-left corner of a window
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::nesw_resize);
-      break;
-    case ImGuiMouseCursor_ResizeNWSE:                                           // When hovering over the bottom-right corner of a window
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::nwse_resize);
-      break;
-    case ImGuiMouseCursor_Hand:                                                 // (Unused by Dear ImGui functions. Use for e.g. hyperlinks)
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::pointer);
-      break;
-    case ImGuiMouseCursor_NotAllowed:                                           // When hovering something with disallowed interaction. Usually a crossed circle.
-      set_cursor_if_necessary(emscripten_browser_cursor::cursor::not_allowed);
-      break;
-    }
-  } else {                                                                      // mouse is away from the gui, hovering over some other part of the viewport
-    if(cursor_callback) {                                                       // if we have a user-provided cursor callback, try to set the cursor from that
-      if(auto cursor_opt{cursor_callback()}; cursor_opt.has_value()) {
-        set_cursor_if_necessary(*cursor_opt);
-      } else {
-        emscripten_browser_cursor::unset();
-      }
-    } else {                                                                    // otherwise just unset the cursor preference
-      emscripten_browser_cursor::unset();
-    }
-  }
 }
 
 void top_level::draw() const {
   /// Render the top level GUI
   ImGui_ImplWGPU_NewFrame();
   //ImGui_ImplGlfw_NewFrame();
-
-
-  // WIP, note that none will appear until after a button has been pressed:
-  if(emscripten_sample_gamepad_data() == EMSCRIPTEN_RESULT_SUCCESS) {
-    int const num_gamepads{emscripten_get_num_gamepads()};
-    logger << "Gamepads available: " << num_gamepads;
-    for(int i = 0; i != num_gamepads; ++i) {
-      if(EmscriptenGamepadEvent gamepad_state; emscripten_get_gamepad_status(i, &gamepad_state) == EMSCRIPTEN_RESULT_SUCCESS) {
-        logger << "Gamepad " << i << " numAxes: " << gamepad_state.numAxes;
-        logger << "Gamepad " << i << " numButtons: " << gamepad_state.numButtons;
-        logger << "Gamepad " << i << " connected: " << gamepad_state.connected;
-        logger << "Gamepad " << i << " index: " << gamepad_state.index;
-        logger << "Gamepad " << i << " id: " << gamepad_state.id;
-        logger << "Gamepad " << i << " mapping: " << gamepad_state.mapping;
-      }
-    }
-  }
+  ImGui_ImplEmscripten_NewFrame();
 
 
   ImGui::NewFrame();
@@ -500,8 +98,6 @@ void top_level::draw() const {
   ImGui::ShowDemoWindow();
 
   ImGui::Render();                                                              // finalise draw data (actual rendering of draw data is done by the renderer later)
-
-  update_cursor();
 }
 
 }

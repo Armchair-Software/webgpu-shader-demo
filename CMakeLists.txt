@@ -137,6 +137,7 @@ add_executable(client
   include/imgui/imgui_demo.cpp
   include/imgui/imgui_draw.cpp
   include/imgui/imgui_freetype.cpp
+  include/imgui/imgui_impl_emscripten.cpp
   include/imgui/imgui_impl_wgpu.cpp
   include/imgui/imgui_stdlib.cpp
   include/imgui/imgui_tables.cpp
