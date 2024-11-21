@@ -339,11 +339,14 @@ void update_cursor() {
 
 void ImGui_ImplEmscripten_Init() {
   /// Initialise the Emscripten backend, setting input callbacks
+  auto &imgui_io{ImGui::GetIO()};
+  imgui_io.BackendPlatformName = "imgui_impl_emscripten";
+  imgui_io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+
+  // set up initial display size values
+  imgui_io.DisplaySize.x = emscripten::val::global("window")["innerWidth"].as<float>();
+  imgui_io.DisplaySize.y = emscripten::val::global("window")["innerHeight"].as<float>();
   {
-    // set up initial display size values
-    auto &imgui_io{ImGui::GetIO()};
-    imgui_io.DisplaySize.x = emscripten::val::global("window")["innerWidth"].as<float>();
-    imgui_io.DisplaySize.y = emscripten::val::global("window")["innerHeight"].as<float>();
     auto const device_pixel_ratio{emscripten::val::global("window")["devicePixelRatio"].as<float>()};
     imgui_io.DisplayFramebufferScale.x = device_pixel_ratio;
     imgui_io.DisplayFramebufferScale.y = device_pixel_ratio;
@@ -494,6 +497,8 @@ void ImGui_ImplEmscripten_Init() {
     false,                                                                      // useCapture
     [](int /*event_type*/, EmscriptenGamepadEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_GAMEPADCONNECTED
       auto &imgui_io{ImGui::GetIO()};
+      imgui_io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+
       // TODO
       return true;                                                              // the event was consumed
     }
@@ -504,6 +509,9 @@ void ImGui_ImplEmscripten_Init() {
     [](int /*event_type*/, EmscriptenGamepadEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_GAMEPADDISCONNECTED
       auto &imgui_io{ImGui::GetIO()};
       // TODO
+
+      // TODO: disable this if no more gamepads are connected
+      //imgui_io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
       return true;                                                              // the event was consumed
     }
   );

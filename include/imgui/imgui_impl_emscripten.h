@@ -5,26 +5,32 @@
 // It uses Emscripten's HTML5 interface to tie callbacks to imgui input, handling window resizing,
 // focus, cursor, keyboard input, touch, gamepad devices etc.  It does not attempt to handle rendering.
 //
-// A note about GLFW on Emscripten: Emscripten includes its own GLFW implementation, which wraps browser HTML5 callbacks to provide the standard GLFW input interface.
+// A note about GLFW on Emscripten: Emscripten includes its own GLFW implementation, which wraps browser HTML5 callbacks to provide the standard GLFW input interface.  So there are two levels of indirection.
 // This backend removes the middleman for input, providing a more efficient direct interface between Emscripten's functionality and imgui input.
 //
 // This is a useful accompaniment for WebGPU rendering (i.e. with imgui_impl_wgpu), where GLFW is not needed for rendering.
 // In that case, this backend replaces all non-rendering-related functionality from GLFW, making it possible to avoid depending on GLFW altogether.
 //
-// For cursor rendering, this includes a cut-down implementation of the Emscripten Browser Cursor library: https://github.com/Armchair-Software/emscripten-browser-cursor
+// For native cursor rendering, this includes a cut-down implementation of the Emscripten Browser Cursor library: https://github.com/Armchair-Software/emscripten-browser-cursor
 //
 // Copyright 2024 Eugene Hopkinson
+
+// Supported features:
+// - Keyboard input
+// - Window resizing
+// - Cursor position
+// - Cursor enters and leaves the window
+// - Application focus
+// - Browser cursors
+
+// TODO:
+// - Gamepads
+// - Touch events
 
 #pragma once
 
 #ifndef __EMSCRIPTEN__
-    #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) == defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-    #error exactly one of IMGUI_IMPL_WEBGPU_BACKEND_DAWN or IMGUI_IMPL_WEBGPU_BACKEND_WGPU must be defined!
-    #endif
-#else
-    #if defined(IMGUI_IMPL_WEBGPU_BACKEND_DAWN) || defined(IMGUI_IMPL_WEBGPU_BACKEND_WGPU)
-    #error neither IMGUI_IMPL_WEBGPU_BACKEND_DAWN nor IMGUI_IMPL_WEBGPU_BACKEND_WGPU may be defined if targeting emscripten!
-    #endif
+  #error The imgui_impl_emscripten backend reqiuires Emscripten.
 #endif
 
 /// Initialise the Emscripten backend, setting input callbacks.  This should be called after ImGui::CreateContext();
