@@ -43,7 +43,10 @@ top_level::top_level(logstorm::manager &this_logger)
     IMGUI_CHECKVERSION();
   #endif // NDEBUG
   ImGui::CreateContext();
-  //ImGui::GetIO();
+  auto &imgui_io{ImGui::GetIO()};
+
+  imgui_io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+  imgui_io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 }
 
 void top_level::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
