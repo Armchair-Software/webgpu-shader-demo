@@ -8,6 +8,8 @@ This is a follow-up, adding GUI rendering with [dear imgui](https://github.com/o
 
 This also demonstrates how you might set up gamepad input with the above backend.  Plug in a gamepad, joystick, or other controller to test the integration - the cube can be rotated, and the gui can be interacted with.  There is no dependency on GLFW.
 
+![image](https://github.com/user-attachments/assets/7bb8d5bf-f627-4fa0-9bda-a6b5b47c9bbe)
+
 ## Live demo
 Live demo: https://armchair-software.github.io/webgpu-demo2/
 
