@@ -6,7 +6,7 @@ For the basic initial demo, see https://github.com/Armchair-Software/webgpu-demo
 
 This is a follow-up, adding GUI rendering with [dear imgui](https://github.com/ocornut/imgui), demonstrating the new emscripten imgui backend.
 
-This also demonstrates how you might set up gamepad input with the above backend.  There is no dependency on GLFW.
+This also demonstrates how you might set up gamepad input with the above backend.  Plug in a gamepad, joystick, or other controller to test the integration - the cube can be rotated, and the gui can be interacted with.  There is no dependency on GLFW.
 
 ## Live demo
 Live demo: https://armchair-software.github.io/webgpu-demo2/
