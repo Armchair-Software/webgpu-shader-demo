@@ -225,13 +225,33 @@ enum class cursor {
 
   // Zooming
   zoom_in,                                                                      // magnifying glass with a plus sign - Something can be zoomed (magnified) in or out.
-  zoom_out
+  zoom_out,
+
+  // Special invalid value
+  invalid = std::numeric_limits<int>::max()
 };
 
 void set(cursor new_cursor);                                                    // set a new cursor from a cursor enum
 void unset();                                                                   // clear the current cursor setting
 
 //////////////////////////////// Implementation ////////////////////////////////
+
+bool is_set() {
+  /// Returns whether the cursor is currently set
+  return EM_ASM_INT(
+    return !(!document.body.style.cursor || document.body.style.cursor.length === 0 );
+  );
+}
+
+std::string get_string() {
+  /// Return the current cursor setting as a string
+  auto cursor_str_ptr{reinterpret_cast<char*>(EM_ASM_PTR(
+    return stringToNewUTF8(document.body.style.cursor);
+  ))};
+  std::string const cursor_str{cursor_str_ptr};
+  free(cursor_str_ptr);
+  return cursor_str;
+}
 
 void set(cursor new_cursor) {
   /// Set the cursor according to the given enum
@@ -268,11 +288,11 @@ void set(cursor new_cursor) {
   }
 }
 
-void unset() {
-  /// Remove the cursor setting
-  EM_ASM(
-    document.body.style.cursor = "";
-  );
+void set(std::string const &new_cursor) {
+  /// Set the cursor from an arbitrary string
+  EM_ASM({
+    document.body.style.cursor = UTF8ToString($0);
+  }, new_cursor.c_str());
 }
 
 } // namespace emscripten_browser_cursor
@@ -281,18 +301,20 @@ namespace {
 
 void update_cursor() {
   /// Sync any cursor changes due to ImGUI to the browser's cursor
-  static emscripten_browser_cursor_internal::cursor current_cursor{emscripten_browser_cursor_internal::cursor::cursor_default};
-  static std::function<std::optional<emscripten_browser_cursor_internal::cursor>()> cursor_callback;
-  // TODO: make these externally modifiable members
+  static emscripten_browser_cursor_internal::cursor current_cursor{emscripten_browser_cursor_internal::cursor::invalid};
+  static std::optional<std::string> cursor_to_restore;
 
   auto set_cursor_if_necessary{[&](emscripten_browser_cursor_internal::cursor new_cursor){
-    if(new_cursor == current_cursor) return;
+    if(new_cursor == current_cursor) return;                                    // don't do anything if the current cursor is already set
     current_cursor = new_cursor;
     emscripten_browser_cursor_internal::set(new_cursor);
   }};
 
-  //if(ImGui::GetIO().WantCaptureMouseUnlessPopupClose) {
   if(ImGui::GetIO().WantCaptureMouse) {                                         // mouse is hovering over the gui
+    if(!cursor_to_restore && emscripten_browser_cursor_internal::is_set()) {
+      cursor_to_restore = emscripten_browser_cursor_internal::get_string();     // back up the existing cursor when entering the imgui capture space
+    }
+
     switch(ImGui::GetMouseCursor()) {
     case ImGuiMouseCursor_Arrow:
       set_cursor_if_necessary(emscripten_browser_cursor_internal::cursor::cursor_default);
@@ -323,14 +345,10 @@ void update_cursor() {
       break;
     }
   } else {                                                                      // mouse is away from the gui, hovering over some other part of the viewport
-    if(cursor_callback) {                                                       // if we have a user-provided cursor callback, try to set the cursor from that
-      if(auto cursor_opt{cursor_callback()}; cursor_opt.has_value()) {
-        set_cursor_if_necessary(*cursor_opt);
-      } else {
-        emscripten_browser_cursor_internal::unset();
-      }
-    } else {                                                                    // otherwise just unset the cursor preference
-      emscripten_browser_cursor_internal::unset();
+    if(cursor_to_restore) {
+      emscripten_browser_cursor_internal::set(*cursor_to_restore);              // restore the previous cursor when leaving the imgui capture space
+      cursor_to_restore = std::nullopt;
+      current_cursor = emscripten_browser_cursor_internal::cursor::invalid;     // select an unused value for current cursor to force a set next time set_cursor_if_necessary is called
     }
   }
 }
@@ -492,30 +510,6 @@ void ImGui_ImplEmscripten_Init() {
     }
   );
 
-  emscripten_set_gamepadconnected_callback(
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenGamepadEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_GAMEPADCONNECTED
-      auto &imgui_io{ImGui::GetIO()};
-      imgui_io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-
-      // TODO
-      return true;                                                              // the event was consumed
-    }
-  );
-  emscripten_set_gamepaddisconnected_callback(
-    nullptr,                                                                    // userData
-    false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenGamepadEvent const *event, void */*data*/) { // event_type == EMSCRIPTEN_EVENT_GAMEPADDISCONNECTED
-      auto &imgui_io{ImGui::GetIO()};
-      // TODO
-
-      // TODO: disable this if no more gamepads are connected
-      //imgui_io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
-      return true;                                                              // the event was consumed
-    }
-  );
-
   // TODO: touch events
 }
 
@@ -544,27 +538,7 @@ void ImGui_ImplEmscripten_Shutdown() {
 }
 
 void ImGui_ImplEmscripten_NewFrame() {
-  /// Update the state of any gamepads that need to be polled
-  // TODO
-
-  // WIP, note that none will appear until after a button has been pressed:
-  if(emscripten_sample_gamepad_data() == EMSCRIPTEN_RESULT_SUCCESS) {
-    int const num_gamepads{emscripten_get_num_gamepads()};
-    ///logger << "Gamepads available: " << num_gamepads;
-    for(int i = 0; i != num_gamepads; ++i) {
-      if(EmscriptenGamepadEvent gamepad_state; emscripten_get_gamepad_status(i, &gamepad_state) == EMSCRIPTEN_RESULT_SUCCESS) {
-        ///logger << "Gamepad " << i << " numAxes: " << gamepad_state.numAxes;
-        ///logger << "Gamepad " << i << " numButtons: " << gamepad_state.numButtons;
-        ///logger << "Gamepad " << i << " connected: " << gamepad_state.connected;
-        ///logger << "Gamepad " << i << " index: " << gamepad_state.index;
-        ///logger << "Gamepad " << i << " id: " << gamepad_state.id;
-        ///logger << "Gamepad " << i << " mapping: " << gamepad_state.mapping;
-
-        // TODO: imgui_io.AddKeyEvent(...);
-      }
-    }
-  }
-
+  /// Update any state that needs to be polled
   update_cursor();
 }
 
