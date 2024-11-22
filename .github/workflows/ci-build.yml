@@ -34,7 +34,7 @@ jobs:
         cp build_rel/client.* deploy/
         mv deploy/client.html deploy/index.html
     - name: Upload files to GitHub Pages
-      uses: actions/upload-pages-artifact@v4
+      uses: actions/upload-pages-artifact@v3
       with:
         path: ./deploy
         
@@ -46,4 +46,4 @@ jobs:
       id-token: write  # Permissions needed for OIDC authentication
     steps:
     - name: Deploy to GitHub Pages
-      uses: actions/deploy-pages@v3
+      uses: actions/deploy-pages@v4
