@@ -3,7 +3,6 @@
 #include <boost/throw_exception.hpp>
 #include <emscripten.h>
 #include <emscripten/html5.h>
-//#include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_emscripten.h>
 #include <imgui/imgui_impl_wgpu.h>
@@ -52,11 +51,8 @@ gui_renderer::gui_renderer(logstorm::manager &this_logger)
 
 void gui_renderer::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
   /// Any additional initialisation that needs to occur after WebGPU has been initialised
-  //ImGui_ImplGlfw_InitForOther(m_window, true);
   ImGui_ImplWGPU_Init(&imgui_wgpu_info);
-
   ImGui_ImplEmscripten_Init();
-
 
   emscripten_set_keydown_callback(
     EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
@@ -93,10 +89,7 @@ void gui_renderer::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
 void gui_renderer::draw() const {
   /// Render the top level GUI
   ImGui_ImplWGPU_NewFrame();
-  //ImGui_ImplGlfw_NewFrame();
   ImGui_ImplEmscripten_NewFrame();
-
-
   ImGui::NewFrame();
 
   ImGui::ShowDemoWindow();
@@ -227,12 +220,9 @@ void game_manager::handle_gamepad_events() {
 
 void game_manager::loop_main() {
   /// Main pseudo-loop
-  //glfwPollEvents();
   handle_gamepad_events();
   gui.draw();
   renderer.draw();
-
-  //glfwSwapBuffers(window.glfw_window);
 }
 
 auto main()->int {

@@ -37,7 +37,6 @@ private:
   webgpu_data webgpu;
 
   struct window_data {
-    //GLFWwindow *glfw_window{nullptr};                                           // GLFW handle for the window
     vec2ui viewport_size;                                                       // our idea of the size of the viewport we render to, in real pixels
     float device_pixel_ratio{1.0f};
   } window;
