@@ -31,7 +31,7 @@ jobs:
     - name: Stage files for upload to GitHub Pages
       run: |
         mkdir deploy
-        cp build/client.* deploy/
+        cp build_rel/client.* deploy/
         mv deploy/client.html deploy/index.html
     - name: Upload files to GitHub Pages
       uses: actions/upload-pages-artifact@v1
