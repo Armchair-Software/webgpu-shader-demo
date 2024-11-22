@@ -90,6 +90,7 @@ void game_manager::register_gamepad_events() {
       auto [new_gamepad_it, success]{game.gamepads.emplace(event->index, gamepad{})};
       assert(success);
       game.set_gamepad_callbacks(new_gamepad_it->second);
+      ImGui::GetIO().BackendFlags |= ImGuiBackendFlags_HasGamepad;
 
       return true;                                                              // the event was consumed
     })
@@ -104,6 +105,7 @@ void game_manager::register_gamepad_events() {
       logger << "DEBUG: gamepad " << event->index << " disconnected";
 
       game.gamepads.erase(event->index);
+      if(game.gamepads.empty()) ImGui::GetIO().BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
 
       return true;                                                              // the event was consumed
     }

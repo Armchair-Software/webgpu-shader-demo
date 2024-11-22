@@ -31,6 +31,7 @@
 // also use gamepad input in your own game logic, so duplicating this processing can add a lot of
 // inefficiency.  For an example of how to handle Emscripten HTML5 gamepad events efficiently, and
 // pass the relevant events to imgui, see https://github.com/Armchair-Software/webgpu-demo2
+// Don't forget to set io.BackendFlags |= ImGuiBackendFlags_HasGamepad when a gamepad is connected.
 
 #pragma once
 
