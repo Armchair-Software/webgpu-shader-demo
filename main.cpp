@@ -21,14 +21,34 @@ void boost::throw_exception(std::exception const & e) {
 
 
 struct gamepad {
-  using analogue_button_callback = std::function<void(double)>;                 // callback for analogue button values
+  using analogue_button_callback = std::function<void(float)>;                  // callback for analogue button values
   using digital_button_callback = std::function<void(bool)>;                    // callback for digital button values
-  using axis_callback = std::function<void(double)>;                            // callback for analogue axis values
+  using axis_callback = std::function<void(float)>;                             // callback for analogue axis values
 
   std::map<unsigned int, analogue_button_callback> analogue_buttons;
   std::map<unsigned int, digital_button_callback> digital_buttons;
   std::map<unsigned int, axis_callback> axes;
 };
+
+
+enum class emscripten_gamepad_button : unsigned int {
+  a,
+  b,
+  x,
+  y,
+  left_bumper,
+  right_bumper,
+  back,
+  start,
+  guide,
+  left_thumb,
+  right_thumb,
+  dpad_up,
+  dpad_right,
+  dpad_down,
+  dpad_left
+};
+
 
 class game_manager {
   logstorm::manager logger{logstorm::manager::build_with_sink<logstorm::sink::console>()}; // logging system
@@ -111,12 +131,58 @@ void game_manager::register_gamepad_events() {
 
 void game_manager::set_gamepad_callbacks(gamepad& this_gamepad) {
   /// Set up gamepad button and axis callbacks on the given gamepad
+  constexpr float deadzone{0.1f};
+
+  // set up button and axis callbacks for imgui
+  this_gamepad.digital_buttons.emplace(  0u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadFaceDown,  down                   );});
+  this_gamepad.digital_buttons.emplace(  1u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadFaceRight, down                   );});
+  this_gamepad.digital_buttons.emplace(  2u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadFaceLeft,  down                   );});
+  this_gamepad.digital_buttons.emplace(  3u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadFaceUp,    down                   );});
+  this_gamepad.digital_buttons.emplace(  4u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadL1,        down                   );});
+  this_gamepad.digital_buttons.emplace(  5u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadR1,        down                   );});
+  this_gamepad.analogue_buttons.emplace( 6u, [&](float value){ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadL2,        value > deadzone, value);});
+  this_gamepad.analogue_buttons.emplace( 7u, [&](float value){ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadR2,        value > deadzone, value);});
+  this_gamepad.digital_buttons.emplace(  8u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadBack,      down                   );});
+  this_gamepad.digital_buttons.emplace(  9u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadStart,     down                   );});
+  this_gamepad.digital_buttons.emplace( 10u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadL3,        down                   );});
+  this_gamepad.digital_buttons.emplace( 11u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadR3,        down                   );});
+  this_gamepad.digital_buttons.emplace( 12u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadDpadUp,    down                   );});
+  this_gamepad.digital_buttons.emplace( 13u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadDpadDown,  down                   );});
+  this_gamepad.digital_buttons.emplace( 14u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadDpadLeft,  down                   );});
+  this_gamepad.digital_buttons.emplace( 15u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      ImGuiKey_GamepadDpadRight, down                   );});
+  //this_gamepad.digital_buttons.emplace( 16u, [&](bool down  ){ImGui::GetIO().AddKeyEvent(      /* guide button */,        down                   );});
+
   // spin the cube with the first two axes
-  this_gamepad.axes.emplace(0u, [&](double value){
-    cube_rotation.x = static_cast<float>(value) * 0.05f;
+  this_gamepad.axes.emplace(0u, [&](float value){
+    cube_rotation.x = value * 0.05f;
+    if(std::signbit(value)) {
+      ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadLStickLeft, value < -deadzone, -value);
+    } else {
+      ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadLStickRight, value > deadzone, value);
+    }
   });
-  this_gamepad.axes.emplace(1u, [&](double value){
-    cube_rotation.y = static_cast<float>(value) * 0.05f;
+  this_gamepad.axes.emplace(1u, [&](float value){
+    cube_rotation.y = value * 0.05f;
+    if(std::signbit(value)) {
+      ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadLStickUp, value < -deadzone, -value);
+    } else {
+      ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadLStickDown, value > deadzone, value);
+    }
+  });
+
+  this_gamepad.axes.emplace(2u, [&](float value){
+    if(std::signbit(value)) {
+      ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadRStickLeft, value < -deadzone, -value);
+    } else {
+      ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadRStickRight, value > deadzone, value);
+    }
+  });
+  this_gamepad.axes.emplace(3u, [&](float value){
+    if(std::signbit(value)) {
+      ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadRStickUp, value < -deadzone, -value);
+    } else {
+      ImGui::GetIO().AddKeyAnalogEvent(ImGuiKey_GamepadRStickDown, value > deadzone, value);
+    }
   });
 }
 
@@ -131,7 +197,7 @@ void game_manager::handle_gamepad_events() {
     for(auto const &[button_index, button] : this_gamepad.analogue_buttons) {
       assert(button_index < static_cast<unsigned int>(gamepad_state.numButtons));
       assert(button);
-      button(gamepad_state.analogButton[button_index]);
+      button(static_cast<float>(gamepad_state.analogButton[button_index]));
     }
     for(auto const &[button_index, button] : this_gamepad.digital_buttons) {
       assert(button_index < static_cast<unsigned int>(gamepad_state.numButtons));
@@ -141,7 +207,7 @@ void game_manager::handle_gamepad_events() {
     for(auto const &[axis_index, axis] : this_gamepad.axes) {
       assert(axis_index < static_cast<unsigned int>(gamepad_state.numAxes));
       assert(axis);
-      axis(gamepad_state.axis[axis_index]);
+      axis(static_cast<float>(gamepad_state.axis[axis_index]));
     }
   }
 }
@@ -150,7 +216,6 @@ void game_manager::loop_main() {
   /// Main pseudo-loop
   handle_gamepad_events();
   gui.draw();
-  logger << "DEBUG: cube rotation this frame " << cube_rotation;
   renderer.draw(cube_rotation);
 }
 
