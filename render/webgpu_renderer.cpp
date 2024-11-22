@@ -717,7 +717,7 @@ void webgpu_renderer::configure() {
   );
 }
 
-void webgpu_renderer::draw() {
+void webgpu_renderer::draw(vec2f const& rotation) {
   /// Draw a frame
   wgpu::TextureView texture_view{webgpu.swapchain.GetCurrentTextureView()};
   if(!texture_view) throw std::runtime_error{"Could not get current texture view from swap chain"};
@@ -774,12 +774,13 @@ void webgpu_renderer::draw() {
       };
 
       // set up matrices
-      static float angle{0.0f};
-      angle += 0.01f;
-      quatf model_rotation{quatf::from_euler_angles_rad(0.0, angle, 0.0)};
+      static vec2f angles;
+      angles += rotation;
+      angles.x += 0.01f;                                                        // constant slow spin
+      quatf model_rotation{quatf::from_euler_angles_rad(0.0, angles.x, 0.0)};
 
       vec3f camera_pos{0.0f, 2.0f, -5.0f};
-      //camera_pos.rotate_rad_y(angle);
+      camera_pos.rotate_rad_x(angles.y);
 
       mat4f projection{make_projection_matrix(static_cast<vec2f>(window.viewport_size))};
       mat4f look_at{mat4f::create_look_at(

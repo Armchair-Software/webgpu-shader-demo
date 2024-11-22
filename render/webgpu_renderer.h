@@ -59,7 +59,7 @@ private:
   void update_imgui_size();
 
 public:
-  void draw();
+  void draw(vec2f const& rotation);
 };
 
 }

@@ -37,8 +37,10 @@ class game_manager {
 
   std::map<int, gamepad> gamepads;
 
+  vec2f cube_rotation;
+
   void register_gamepad_events();
-  void set_gamepad_callbacks(gamepad const& this_gamepad);
+  void set_gamepad_callbacks(gamepad& this_gamepad);
   void handle_gamepad_events();
 
   void loop_main();
@@ -107,9 +109,15 @@ void game_manager::register_gamepad_events() {
   );
 }
 
-void game_manager::set_gamepad_callbacks(gamepad const& this_gamepad) {
+void game_manager::set_gamepad_callbacks(gamepad& this_gamepad) {
   /// Set up gamepad button and axis callbacks on the given gamepad
-  // TODO
+  // spin the cube with the first two axes
+  this_gamepad.axes.emplace(0u, [&](double value){
+    cube_rotation.x = static_cast<float>(value) * 0.05f;
+  });
+  this_gamepad.axes.emplace(1u, [&](double value){
+    cube_rotation.y = static_cast<float>(value) * 0.05f;
+  });
 }
 
 void game_manager::handle_gamepad_events() {
@@ -142,7 +150,8 @@ void game_manager::loop_main() {
   /// Main pseudo-loop
   handle_gamepad_events();
   gui.draw();
-  renderer.draw();
+  logger << "DEBUG: cube rotation this frame " << cube_rotation;
+  renderer.draw(cube_rotation);
 }
 
 auto main()->int {
