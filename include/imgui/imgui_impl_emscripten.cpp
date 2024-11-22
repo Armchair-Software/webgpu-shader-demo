@@ -511,7 +511,7 @@ void ImGui_ImplEmscripten_Init() {
       // TODO
 
       // TODO: disable this if no more gamepads are connected
-      //imgui_io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+      //imgui_io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
       return true;                                                              // the event was consumed
     }
   );
@@ -536,6 +536,11 @@ void ImGui_ImplEmscripten_Shutdown() {
   emscripten_set_gamepadconnected_callback(                            nullptr, false, nullptr);
   emscripten_set_gamepaddisconnected_callback(                         nullptr, false, nullptr);
   // TODO: touch events
+
+  auto &imgui_io{ImGui::GetIO()};
+  imgui_io.BackendPlatformName = nullptr;
+  imgui_io.BackendPlatformUserData = nullptr;
+  imgui_io.BackendFlags &= ~(ImGuiBackendFlags_HasMouseCursors | ImGuiBackendFlags_HasGamepad);
 }
 
 void ImGui_ImplEmscripten_NewFrame() {
@@ -554,6 +559,8 @@ void ImGui_ImplEmscripten_NewFrame() {
         ///logger << "Gamepad " << i << " index: " << gamepad_state.index;
         ///logger << "Gamepad " << i << " id: " << gamepad_state.id;
         ///logger << "Gamepad " << i << " mapping: " << gamepad_state.mapping;
+
+        // TODO: imgui_io.AddKeyEvent(...);
       }
     }
   }
