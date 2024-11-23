@@ -33,6 +33,12 @@ if [ ! -d "$build_dir" ]; then
   mkdir "$build_dir"
 fi
 
+# validate shaders
+if ! [ -z "$(which naga)" ]; then
+  echo "Validating shaders with naga-cli"
+  naga --bulk-validate render/shaders/*.wgsl || exit 1
+fi
+
 # compile resources
 compiled_resources_total=0
 compiled_resources_up_to_date=0
