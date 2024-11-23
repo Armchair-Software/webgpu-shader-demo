@@ -11,6 +11,7 @@
 #include <magic_enum/magic_enum.hpp>
 #include "sqrt_constexpr.h"
 #include "indirect.h"
+#include "instance.h"
 #include "vertex.h"
 #include "triangle_index.h"
 #include "uniforms.h"
@@ -614,11 +615,39 @@ void webgpu_renderer::configure() {
         .shaderLocation{2},
       },
     };
+    std::array instance_attributes{
+      wgpu::VertexAttribute{
+        .format{wgpu::VertexFormat::Float32x4},                                 // we want a mat4, so we pass four vec4 rows per instance - see https://www.reddit.com/r/vulkan/comments/8zx1hn/comment/e2m2diq/
+        .offset{offsetof(instance, model) + (sizeof(float) * 4 * 0)},
+        .shaderLocation{3},
+      },
+      wgpu::VertexAttribute{
+        .format{wgpu::VertexFormat::Float32x4},
+        .offset{offsetof(instance, model) + (sizeof(float) * 4 * 1)},
+        .shaderLocation{4},
+      },
+      wgpu::VertexAttribute{
+        .format{wgpu::VertexFormat::Float32x4},
+        .offset{offsetof(instance, model) + (sizeof(float) * 4 * 2)},
+        .shaderLocation{5},
+      },
+      wgpu::VertexAttribute{
+        .format{wgpu::VertexFormat::Float32x4},
+        .offset{offsetof(instance, model) + (sizeof(float) * 4 * 3)},
+        .shaderLocation{6},
+      },
+    };
     std::vector<wgpu::VertexBufferLayout> vertex_buffer_layouts{
       {
         .arrayStride{sizeof(vertex)},
         .attributeCount{vertex_attributes.size()},
         .attributes{vertex_attributes.data()},
+      },
+      {
+        .arrayStride{sizeof(instance)},
+        .stepMode{wgpu::VertexStepMode::Instance},                              // per-instance buffer
+        .attributeCount{instance_attributes.size()},
+        .attributes{instance_attributes.data()},
       },
     };
 
@@ -797,18 +826,22 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       )};
 
       uniforms uniform_data{
-        {},
-        mat3fwgpu{model_rotation.rotmatrix()},
+        .view_projection{projection * look_at},
+        .normal{mat3fwgpu{model_rotation.rotmatrix()}},
       };
-      for(unsigned int i = 0; i != uniform_data.model_view_projection_matrix.size(); ++i) {
-        unsigned int constexpr grid_size{static_cast<unsigned int>(sqrt_constexpr(uniform_data.model_view_projection_matrix.size()))};
-        vec2ui const grid_pos{i % grid_size, i / grid_size};
-        mat4f const offset{mat4f::create_translation(
-          {-8.0f + (static_cast<float>(grid_pos.x) * 3.0f)},
-          0.0f,
-          {-8.0f + (static_cast<float>(grid_pos.z) * 3.0f)}
-        )};
-        uniform_data.model_view_projection_matrix[i] = projection * look_at * offset * model_rotation.transform();
+
+      // per-instance data
+      vec3ui constexpr grid_size{50, 10, 50};
+      unsigned int constexpr num_instances{grid_size.x * grid_size.y * grid_size.z};
+      std::vector<instance> instance_data;
+      instance_data.reserve(num_instances);
+      for(unsigned int y = 0; y != grid_size.y; ++y) {
+        for(unsigned int z = 0; z != grid_size.z; ++z) {
+          for(unsigned int x = 0; x != grid_size.x; ++x) {
+            mat4f const offset{mat4f::create_translation(((vec3f{vec3ui{x, y, z}} - (vec3f{grid_size} * 0.5f)) * 3.0f) + vec3f{0.0f, 0.0f, 70.0f})};
+            instance_data.emplace_back(offset * model_rotation.transform());
+          }
+        }
       }
 
       // vertex buffer
@@ -823,6 +856,20 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         0,                                                                      // offset
         vertex_data.data(),                                                     // data
         vertex_data.size() * sizeof(vertex_data[0])                             // size
+      );
+
+      // instance buffer (per-instance vertex buffer)
+      wgpu::BufferDescriptor instance_buffer_descriptor{
+        .label{"Instance buffer 1"},
+        .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex},
+        .size{instance_data.size() * sizeof(instance_data[0])},
+      };
+      wgpu::Buffer instance_buffer{webgpu.device.CreateBuffer(&instance_buffer_descriptor)};
+      webgpu.queue.WriteBuffer(
+        instance_buffer,                                                        // buffer
+        0,                                                                      // offset
+        instance_data.data(),                                                   // data
+        instance_data.size() * sizeof(instance_data[0])                         // size
       );
 
       // index buffer
@@ -868,13 +915,14 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       wgpu::BindGroup bind_group{webgpu.device.CreateBindGroup(&bind_group_descriptor)};
 
       render_pass_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
+      render_pass_encoder.SetVertexBuffer(1, instance_buffer, 0, instance_buffer.GetSize()); // slot, buffer, offset, size
       render_pass_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
       render_pass_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
 
       // indirect draw command buffer
       indirect_indexed_command const indirect_data{
         .index_count{index_data.size() * decltype(index_data)::value_type::size()},
-        .instance_count{uniform_data.model_view_projection_matrix.size()},
+        .instance_count{num_instances},
       };
       wgpu::BufferDescriptor indirect_buffer_descriptor{
         .label{"Indirect buffer 1"},
