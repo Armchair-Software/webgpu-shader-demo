@@ -831,8 +831,9 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       };
 
       // per-instance data
-      vec3ui constexpr grid_size{50, 10, 50};
-      unsigned int constexpr num_instances{grid_size.x * grid_size.y * grid_size.z};
+      static unsigned int grid_count{50};
+      vec3ui const grid_size{grid_count, 10, grid_count};
+      unsigned int const num_instances{grid_size.x * grid_size.y * grid_size.z};
       std::vector<instance> instance_data;
       instance_data.reserve(num_instances);
       for(unsigned int y = 0; y != grid_size.y; ++y) {
