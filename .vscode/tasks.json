@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Build with script",
+			"label": "Build",
 			"type": "shell",
 			"command": "./build.sh",
 			"group": "build",
@@ -12,7 +12,7 @@
 			}
 		},
 		{
-			"label": "Run with script",
+			"label": "Run",
 			"type": "shell",
 			"command": "./run.sh",
 			"group": "run",
@@ -20,6 +20,36 @@
 			  "reveal": "always",
 			  "panel": "new"
 			}
-		}
+		},
+		{
+			"label": "Build & run",
+			"type": "shell",
+			"command": "./build.sh && ./run.sh",
+			"group": "run",
+			"presentation": {
+			  "reveal": "always",
+			  "panel": "new"
+			}
+		},
+		{
+			"label": "Build (release)",
+			"type": "shell",
+			"command": "CMAKE_BUILD_TYPE=Release ./build.sh",
+			"group": "build",
+			"presentation": {
+			  "reveal": "always",
+			  "panel": "new"
+			}
+		},
+		{
+			"label": "Run (release)",
+			"type": "shell",
+			"command": "CMAKE_BUILD_TYPE=Release ./run.sh",
+			"group": "run",
+			"presentation": {
+			  "reveal": "always",
+			  "panel": "new"
+			}
+		},
 	]
 }
