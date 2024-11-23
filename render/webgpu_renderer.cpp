@@ -614,10 +614,12 @@ void webgpu_renderer::configure() {
         .shaderLocation{2},
       },
     };
-    wgpu::VertexBufferLayout vertex_buffer_layout{
-      .arrayStride{sizeof(vertex)},
-      .attributeCount{vertex_attributes.size()},
-      .attributes{vertex_attributes.data()},
+    std::vector<wgpu::VertexBufferLayout> vertex_buffer_layouts{
+      {
+        .arrayStride{sizeof(vertex)},
+        .attributeCount{vertex_attributes.size()},
+        .attributes{vertex_attributes.data()},
+      },
     };
 
     wgpu::BlendState blend_state{
@@ -690,8 +692,8 @@ void webgpu_renderer::configure() {
         .entryPoint{"vs_main"},
         .constantCount{0},
         .constants{nullptr},
-        .bufferCount{1},
-        .buffers{&vertex_buffer_layout},
+        .bufferCount{vertex_buffer_layouts.size()},
+        .buffers{vertex_buffer_layouts.data()},
       },
       .primitive{                                                               // PrimitiveState
         .cullMode{wgpu::CullMode::Back},
