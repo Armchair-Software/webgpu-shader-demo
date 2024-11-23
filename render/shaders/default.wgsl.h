@@ -4,7 +4,8 @@
 
 namespace render::shaders {
 
-inline constexpr char const *default_wgsl{R"081f8b92eef0a2c7(struct vertex_input {
+inline constexpr char const *default_wgsl{R"e556a2dfe24c3820(struct vertex_input {
+  @builtin(instance_index) instance: u32,
   @location(0) position: vec3f,
   @location(1) normal: vec3f,
   @location(2) colour: vec4f,
@@ -14,7 +15,7 @@ struct vertex_output {
   @location(1) @interpolate(flat, first) colour: vec4f,
 };
 struct uniform_struct {
-  model_view_projection_matrix: mat4x4f,
+  model_view_projection_matrix: array<mat4x4f, 16 * 16>,
   normal_matrix: mat3x3f,
 };
 @group(0) @binding(0) var<uniform> uniforms: uniform_struct;
@@ -23,7 +24,7 @@ const ambient = 0.5f;
 @vertex
 fn vs_main(in: vertex_input) -> vertex_output {
   var out: vertex_output;
-  out.position = uniforms.model_view_projection_matrix * vec4f(in.position, 1.0);
+  out.position = uniforms.model_view_projection_matrix[in.instance] * vec4f(in.position, 1.0);
   let transformed_normal = uniforms.normal_matrix * in.normal;
   let diffuse_intensity = (max(dot(transformed_normal, light_dir), 0.0) * (1.0 - ambient)) + ambient;
   out.colour = vec4f(in.colour.rgb * diffuse_intensity, in.colour.a);
@@ -33,6 +34,6 @@ fn vs_main(in: vertex_input) -> vertex_output {
 fn fs_main(in: vertex_output) -> @location(0) vec4f {
   return in.colour;
 }
-)081f8b92eef0a2c7"};
+)e556a2dfe24c3820"};
 
 } // namespace render::shaders

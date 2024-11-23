@@ -1,4 +1,5 @@
 struct vertex_input {
+  @builtin(instance_index) instance: u32,
   @location(0) position: vec3f,
   @location(1) normal: vec3f,
   @location(2) colour: vec4f,
@@ -11,7 +12,7 @@ struct vertex_output {
 };
 
 struct uniform_struct {
-  model_view_projection_matrix: mat4x4f,
+  model_view_projection_matrix: array<mat4x4f, 16 * 16>,
   normal_matrix: mat3x3f,
 };
 
@@ -23,7 +24,7 @@ const ambient = 0.5f;
 @vertex
 fn vs_main(in: vertex_input) -> vertex_output {
   var out: vertex_output;
-  out.position = uniforms.model_view_projection_matrix * vec4f(in.position, 1.0);
+  out.position = uniforms.model_view_projection_matrix[in.instance] * vec4f(in.position, 1.0);
   //out.normal = uniforms.normal_matrix * in.normal;
   let transformed_normal = uniforms.normal_matrix * in.normal;
 

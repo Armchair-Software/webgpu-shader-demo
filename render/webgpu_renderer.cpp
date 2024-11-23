@@ -9,6 +9,7 @@
 #include <emscripten/val.h>
 #include <imgui/imgui_impl_wgpu.h>
 #include <magic_enum/magic_enum.hpp>
+#include "sqrt_constexpr.h"
 #include "vertex.h"
 #include "triangle_index.h"
 #include "uniforms.h"
@@ -779,7 +780,7 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       angles.x += 0.01f;                                                        // constant slow spin
       quatf model_rotation{quatf::from_euler_angles_rad(0.0, angles.x, 0.0)};
 
-      vec3f camera_pos{0.0f, 2.0f, -5.0f};
+      vec3f camera_pos{0.0f, 10.0f, -25.0f};
       camera_pos.rotate_rad_x(angles.y);
 
       mat4f projection{make_projection_matrix(static_cast<vec2f>(window.viewport_size))};
@@ -790,9 +791,19 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       )};
 
       uniforms uniform_data{
-        projection * look_at * model_rotation.transform(),
+        {},
         mat3fwgpu{model_rotation.rotmatrix()},
       };
+      for(unsigned int i = 0; i != uniform_data.model_view_projection_matrix.size(); ++i) {
+        unsigned int constexpr grid_size{static_cast<unsigned int>(sqrt_constexpr(uniform_data.model_view_projection_matrix.size()))};
+        vec2ui const grid_pos{i % grid_size, i / grid_size};
+        mat4f const offset{mat4f::create_translation(
+          {-8.0f + (static_cast<float>(grid_pos.x) * 3.0f)},
+          0.0f,
+          {-8.0f + (static_cast<float>(grid_pos.z) * 3.0f)}
+        )};
+        uniform_data.model_view_projection_matrix[i] = projection * look_at * offset * model_rotation.transform();
+      }
 
       // vertex buffer
       wgpu::BufferDescriptor vertex_buffer_descriptor{
@@ -853,7 +864,7 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       render_pass_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
       render_pass_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
       render_pass_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
-      render_pass_encoder.DrawIndexed(index_data.size() * decltype(index_data)::value_type::size()); // indexCount, instanceCount = 1, firstIndex = 0, baseVertex = 0, firstInstance = 0
+      render_pass_encoder.DrawIndexed(index_data.size() * decltype(index_data)::value_type::size(), uniform_data.model_view_projection_matrix.size()); // indexCount, instanceCount = 1, firstIndex = 0, baseVertex = 0, firstInstance = 0
 
       ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), render_pass_encoder.Get()); // render the outstanding GUI draw data
 
