@@ -292,7 +292,7 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
             .maxTextureArrayLayers{1},
             .maxBindGroups{2},
             .maxUniformBuffersPerShaderStage{1},
-            .maxUniformBufferBindingSize{16 * 4},
+            .maxUniformBufferBindingSize{sizeof(uniforms)},
             .maxVertexBuffers{1},
             .maxBufferSize{6 * 2 * sizeof(float)},
             .maxVertexAttributes{1},

@@ -12,7 +12,7 @@ struct vertex_output {
 };
 
 struct uniform_struct {
-  model_view_projection_matrix: array<mat4x4f, 16 * 16>,
+  model_view_projection_matrix: array<mat4x4f, 30 * 30>,
   normal_matrix: mat3x3f,
 };
 

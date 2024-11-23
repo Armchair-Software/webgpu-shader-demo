@@ -4,7 +4,7 @@
 
 namespace render::shaders {
 
-inline constexpr char const *default_wgsl{R"e556a2dfe24c3820(struct vertex_input {
+inline constexpr char const *default_wgsl{R"1366a8cee8786564(struct vertex_input {
   @builtin(instance_index) instance: u32,
   @location(0) position: vec3f,
   @location(1) normal: vec3f,
@@ -15,7 +15,7 @@ struct vertex_output {
   @location(1) @interpolate(flat, first) colour: vec4f,
 };
 struct uniform_struct {
-  model_view_projection_matrix: array<mat4x4f, 16 * 16>,
+  model_view_projection_matrix: array<mat4x4f, 30 * 30>,
   normal_matrix: mat3x3f,
 };
 @group(0) @binding(0) var<uniform> uniforms: uniform_struct;
@@ -34,6 +34,6 @@ fn vs_main(in: vertex_input) -> vertex_output {
 fn fs_main(in: vertex_output) -> @location(0) vec4f {
   return in.colour;
 }
-)e556a2dfe24c3820"};
+)1366a8cee8786564"};
 
 } // namespace render::shaders
