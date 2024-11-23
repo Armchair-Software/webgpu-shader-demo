@@ -10,6 +10,7 @@
 #include <imgui/imgui_impl_wgpu.h>
 #include <magic_enum/magic_enum.hpp>
 #include "sqrt_constexpr.h"
+#include "indirect.h"
 #include "vertex.h"
 #include "triangle_index.h"
 #include "uniforms.h"
@@ -867,7 +868,26 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       render_pass_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
       render_pass_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
       render_pass_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
-      render_pass_encoder.DrawIndexed(index_data.size() * decltype(index_data)::value_type::size(), uniform_data.model_view_projection_matrix.size()); // indexCount, instanceCount = 1, firstIndex = 0, baseVertex = 0, firstInstance = 0
+
+      // indirect draw command buffer
+      indirect_indexed_command const indirect_data{
+        .index_count{index_data.size() * decltype(index_data)::value_type::size()},
+        .instance_count{uniform_data.model_view_projection_matrix.size()},
+      };
+      wgpu::BufferDescriptor indirect_buffer_descriptor{
+        .label{"Indirect buffer 1"},
+        .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Indirect},
+        .size{sizeof(indirect_data)},
+      };
+      wgpu::Buffer indirect_buffer(webgpu.device.CreateBuffer(&indirect_buffer_descriptor));
+      webgpu.queue.WriteBuffer(
+        indirect_buffer,                                                        // buffer
+        0,                                                                      // offset
+        &indirect_data,                                                         // data
+        sizeof(indirect_data)                                                   // size
+      );
+
+      render_pass_encoder.DrawIndexedIndirect(indirect_buffer, 0);              // indirectBuffer, indirectOffset
 
       ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), render_pass_encoder.Get()); // render the outstanding GUI draw data
 
