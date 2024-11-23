@@ -761,32 +761,17 @@ void webgpu_renderer::draw(vec2f const& rotation) {
     };
     wgpu::CommandEncoder command_encoder{webgpu.device.CreateCommandEncoder(&command_encoder_descriptor)};
 
+    wgpu::RenderBundleEncoderDescriptor render_bundle_encoder_descriptor{
+      .label{"Render bundle encoder 1"},
+      .colorFormatCount{1},
+      .colorFormats{&webgpu.surface_preferred_format},
+      .depthStencilFormat{webgpu.depth_texture_format},
+    };
+    wgpu::RenderBundleEncoder render_bundle_encoder{webgpu.device.CreateRenderBundleEncoder(&render_bundle_encoder_descriptor)};
+
     {
-      // set up render pass
-      command_encoder.PushDebugGroup("Render pass 1");
-      wgpu::RenderPassColorAttachment render_pass_colour_attachment{
-        .view{texture_view},
-        .loadOp{wgpu::LoadOp::Clear},
-        .storeOp{wgpu::StoreOp::Store},
-        .clearValue{wgpu::Color{0, 0.5, 0.5, 1.0}},
-      };
-
-      wgpu::RenderPassDepthStencilAttachment render_pass_depth_stencil_attachment{
-        .view{webgpu.depth_texture_view},
-        .depthLoadOp{wgpu::LoadOp::Clear},
-        .depthStoreOp{wgpu::StoreOp::Store},
-        .depthClearValue{1.0f},
-      };
-      wgpu::RenderPassDescriptor render_pass_descriptor{
-        .label{"Render pass 1"},
-        .colorAttachmentCount{1},
-        .colorAttachments{&render_pass_colour_attachment},
-        .depthStencilAttachment{&render_pass_depth_stencil_attachment},
-      };
-      wgpu::RenderPassEncoder render_pass_encoder{command_encoder.BeginRenderPass(&render_pass_descriptor)};
-      // TODO: render bundles: https://toji.dev/webgpu-best-practices/render-bundles.html
-
-      render_pass_encoder.SetPipeline(webgpu.pipeline);                         // select which render pipeline to use
+      // set up render bundle contents
+      render_bundle_encoder.SetPipeline(webgpu.pipeline);                       // select which render pipeline to use
 
       // set up test buffers
       std::vector<vertex> vertex_data{
@@ -916,10 +901,10 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       };
       wgpu::BindGroup bind_group{webgpu.device.CreateBindGroup(&bind_group_descriptor)};
 
-      render_pass_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
-      render_pass_encoder.SetVertexBuffer(1, instance_buffer, 0, instance_buffer.GetSize()); // slot, buffer, offset, size
-      render_pass_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
-      render_pass_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
+      render_bundle_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
+      render_bundle_encoder.SetVertexBuffer(1, instance_buffer, 0, instance_buffer.GetSize()); // slot, buffer, offset, size
+      render_bundle_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
+      render_bundle_encoder.SetBindGroup(0, bind_group);                        // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
 
       // indirect draw command buffer
       indirect_indexed_command const indirect_data{
@@ -939,7 +924,38 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         sizeof(indirect_data)                                                   // size
       );
 
-      render_pass_encoder.DrawIndexedIndirect(indirect_buffer, 0);              // indirectBuffer, indirectOffset
+      render_bundle_encoder.DrawIndexedIndirect(indirect_buffer, 0);            // indirectBuffer, indirectOffset
+
+      wgpu::RenderBundleDescriptor render_bundle_descriptor{
+        .label{"Render bundle 1"},
+      };
+      wgpu::RenderBundle render_bundle{render_bundle_encoder.Finish(&render_bundle_descriptor)};
+
+
+      // set up render pass
+      command_encoder.PushDebugGroup("Render pass 1");
+      wgpu::RenderPassColorAttachment render_pass_colour_attachment{
+        .view{texture_view},
+        .loadOp{wgpu::LoadOp::Clear},
+        .storeOp{wgpu::StoreOp::Store},
+        .clearValue{wgpu::Color{0, 0.5, 0.5, 1.0}},
+      };
+
+      wgpu::RenderPassDepthStencilAttachment render_pass_depth_stencil_attachment{
+        .view{webgpu.depth_texture_view},
+        .depthLoadOp{wgpu::LoadOp::Clear},
+        .depthStoreOp{wgpu::StoreOp::Store},
+        .depthClearValue{1.0f},
+      };
+      wgpu::RenderPassDescriptor render_pass_descriptor{
+        .label{"Render pass 1"},
+        .colorAttachmentCount{1},
+        .colorAttachments{&render_pass_colour_attachment},
+        .depthStencilAttachment{&render_pass_depth_stencil_attachment},
+      };
+      wgpu::RenderPassEncoder render_pass_encoder{command_encoder.BeginRenderPass(&render_pass_descriptor)};
+
+      render_pass_encoder.ExecuteBundles(1, &render_bundle);
 
       ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), render_pass_encoder.Get()); // render the outstanding GUI draw data
 
