@@ -751,6 +751,7 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         .depthStencilAttachment{&render_pass_depth_stencil_attachment},
       };
       wgpu::RenderPassEncoder render_pass_encoder{command_encoder.BeginRenderPass(&render_pass_descriptor)};
+      // TODO: render bundles: https://toji.dev/webgpu-best-practices/render-bundles.html
 
       render_pass_encoder.SetPipeline(webgpu.pipeline);                         // select which render pipeline to use
 
@@ -784,6 +785,8 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       camera_pos.rotate_rad_x(angles.y);
 
       mat4f projection{make_projection_matrix(static_cast<vec2f>(window.viewport_size))};
+      // TODO: reversed Z matrix adaptations: https://webgpu.github.io/webgpu-samples/?sample=reversedZ
+
       mat4f look_at{mat4f::create_look_at(
         camera_pos,                                                             // eye pos
         {0.0f, 0.0f, 0.0f},                                                     // target pos
@@ -868,7 +871,13 @@ void webgpu_renderer::draw(vec2f const& rotation) {
 
       ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), render_pass_encoder.Get()); // render the outstanding GUI draw data
 
-      // TODO: add timestamp query: https://eliemichel.github.io/LearnWebGPU/advanced-techniques/benchmarking/time.html
+      // TODO: add timestamp query: https://eliemichel.github.io/LearnWebGPU/advanced-techniques/benchmarking/time.html / https://webgpu.github.io/webgpu-samples/?sample=timestampQuery
+
+      // TODO: occlusion queries https://webgpu.github.io/webgpu-samples/?sample=occlusionQuery#main.ts
+
+      // TODO: wireframe rendering pipeline per barycentric coordinates https://webgpu.github.io/webgpu-samples/?sample=wireframe#main.ts
+      // TODO: render bundle culling https://github.com/toji/webgpu-bundle-culling
+
       render_pass_encoder.End();
     }
 
