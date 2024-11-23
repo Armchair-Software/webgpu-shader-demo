@@ -763,6 +763,7 @@ void webgpu_renderer::draw(vec2f const& rotation) {
 
     {
       // set up render pass
+      command_encoder.PushDebugGroup("Render pass 1");
       wgpu::RenderPassColorAttachment render_pass_colour_attachment{
         .view{texture_view},
         .loadOp{wgpu::LoadOp::Clear},
@@ -950,6 +951,7 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       // TODO: render bundle culling https://github.com/toji/webgpu-bundle-culling
 
       render_pass_encoder.End();
+      command_encoder.PopDebugGroup();
     }
 
     command_encoder.InsertDebugMarker("Debug marker 1");
