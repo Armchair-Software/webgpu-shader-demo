@@ -37,8 +37,9 @@ jobs:
       uses: actions/upload-pages-artifact@v3
       with:
         path: ./deploy
-        
+
   deploy:
+    if: false # Stage disabled
     runs-on: ubuntu-latest
     needs: build-rel
     permissions:
