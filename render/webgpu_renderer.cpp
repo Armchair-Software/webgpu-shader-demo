@@ -839,6 +839,34 @@ void webgpu_renderer::build_scene() {
     };
     render_bundles.emplace_back(render_bundle_encoder.Finish(&render_bundle_descriptor));
   }
+
+  // populate buffer contents
+  webgpu.queue.WriteBuffer(
+    vertex_buffer,                                                          // buffer
+    0,                                                                      // offset
+    vertex_data.data(),                                                     // data
+    vertex_data.size() * sizeof(vertex_data[0])                             // size
+  );
+
+  webgpu.queue.WriteBuffer(
+    index_buffer,                                                           // buffer
+    0,                                                                      // offset
+    index_data.data(),                                                      // data
+    index_data.size() * sizeof(index_data[0])                               // size
+  );
+
+  // indirect draw command data
+  indirect_data = {
+    .index_count{index_data.size() * decltype(index_data)::value_type::size()},
+    .instance_count{num_instances},
+  };
+
+  webgpu.queue.WriteBuffer(
+    indirect_buffer,                                                        // buffer
+    0,                                                                      // offset
+    &indirect_data,                                                         // data
+    sizeof(indirect_data)                                                   // size
+  );
 }
 
 void webgpu_renderer::draw(vec2f const& rotation) {
@@ -886,20 +914,7 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         }
       }
 
-      // indirect draw command data
-      indirect_data = {
-        .index_count{index_data.size() * decltype(index_data)::value_type::size()},
-        .instance_count{num_instances},
-      };
-
       // update buffer contents
-      webgpu.queue.WriteBuffer(
-        vertex_buffer,                                                          // buffer
-        0,                                                                      // offset
-        vertex_data.data(),                                                     // data
-        vertex_data.size() * sizeof(vertex_data[0])                             // size
-      );
-
       webgpu.queue.WriteBuffer(
         instance_buffer,                                                        // buffer
         0,                                                                      // offset
@@ -908,24 +923,10 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       );
 
       webgpu.queue.WriteBuffer(
-        index_buffer,                                                           // buffer
-        0,                                                                      // offset
-        index_data.data(),                                                      // data
-        index_data.size() * sizeof(index_data[0])                               // size
-      );
-
-      webgpu.queue.WriteBuffer(
         uniform_buffer,                                                         // buffer
         0,                                                                      // offset
         &uniform_data,                                                          // data
         sizeof(uniform_data)                                                    // size
-      );
-
-      webgpu.queue.WriteBuffer(
-        indirect_buffer,                                                        // buffer
-        0,                                                                      // offset
-        &indirect_data,                                                         // data
-        sizeof(indirect_data)                                                   // size
       );
 
       // set up render pass
