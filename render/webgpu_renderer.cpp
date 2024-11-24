@@ -9,13 +9,11 @@
 #include <emscripten/val.h>
 #include <imgui/imgui_impl_wgpu.h>
 #include <magic_enum/magic_enum.hpp>
+#include "vectorstorm/matrix/matrix3.h"
 #include "sqrt_constexpr.h"
-#include "indirect.h"
 #include "instance.h"
-#include "vertex.h"
-#include "triangle_index.h"
-#include "uniforms.h"
 #include "shaders/default.wgsl.h"
+
 
 namespace render {
 
@@ -748,6 +746,99 @@ void webgpu_renderer::configure() {
       return true;                                                              // the event was consumed
     })
   );
+
+  build_scene();
+}
+
+void webgpu_renderer::build_scene() {
+  /// Assemble the unchanging portions of the scene
+  // set up test buffers
+
+  // create buffers
+  {
+    // vertex buffer
+    wgpu::BufferDescriptor vertex_buffer_descriptor{
+      .label{"Vertex buffer 1"},
+      .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex},
+      .size{vertex_data.size() * sizeof(vertex_data[0])},
+    };
+    vertex_buffer = webgpu.device.CreateBuffer(&vertex_buffer_descriptor);
+  }
+  {
+    // instance buffer (per-instance vertex buffer)
+    wgpu::BufferDescriptor instance_buffer_descriptor{
+      .label{"Instance buffer 1"},
+      .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex},
+      .size{num_instances * sizeof(instance)},
+    };
+    instance_buffer = webgpu.device.CreateBuffer(&instance_buffer_descriptor);
+  }
+  {
+    // index buffer
+    wgpu::BufferDescriptor index_buffer_descriptor{
+      .label{"Index buffer 1"},
+      .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index},
+      .size{index_data.size() * sizeof(index_data[0])},
+    };
+    index_buffer = webgpu.device.CreateBuffer(&index_buffer_descriptor);
+  }
+  {
+    // uniform buffer
+    wgpu::BufferDescriptor uniform_buffer_desecriptor{
+      .label{"Uniform buffer 1"},
+      .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform},
+      .size{sizeof(uniform_data)},
+    };
+    uniform_buffer = webgpu.device.CreateBuffer(&uniform_buffer_desecriptor);
+  }
+
+  // indirect draw command buffer
+  {
+    wgpu::BufferDescriptor indirect_buffer_descriptor{
+      .label{"Indirect buffer 1"},
+      .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Indirect},
+      .size{sizeof(indirect_data)},
+    };
+    indirect_buffer = webgpu.device.CreateBuffer(&indirect_buffer_descriptor);
+  }
+
+  // uniform bind group
+  wgpu::BindGroupEntry bind_group_entry{
+    .binding{0},
+    .buffer{uniform_buffer},
+    .size{sizeof(uniforms)},
+  };
+  wgpu::BindGroupDescriptor bind_group_descriptor{
+    .label{"Bind group 1"},
+    .layout{webgpu.bind_group_layout},
+    .entryCount{1},                                                             // must correspond to layout
+    .entries{&bind_group_entry},
+  };
+  wgpu::BindGroup bind_group{webgpu.device.CreateBindGroup(&bind_group_descriptor)};
+
+  // set up render bundle
+  {
+    wgpu::RenderBundleEncoderDescriptor render_bundle_encoder_descriptor{
+      .label{"Render bundle encoder 1"},
+      .colorFormatCount{1},
+      .colorFormats{&webgpu.surface_preferred_format},
+      .depthStencilFormat{webgpu.depth_texture_format},
+    };
+    wgpu::RenderBundleEncoder render_bundle_encoder{webgpu.device.CreateRenderBundleEncoder(&render_bundle_encoder_descriptor)};
+
+    render_bundle_encoder.SetPipeline(webgpu.pipeline);                         // select which render pipeline to use
+    render_bundle_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
+    render_bundle_encoder.SetVertexBuffer(1, instance_buffer, 0, instance_buffer.GetSize()); // slot, buffer, offset, size
+    render_bundle_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
+    render_bundle_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
+
+    render_bundle_encoder.DrawIndexedIndirect(indirect_buffer, 0);              // indirectBuffer, indirectOffset
+
+    wgpu::RenderBundleDescriptor render_bundle_descriptor{
+      .label{"Render bundle 1"},
+    };
+    render_bundles.emplace_back(render_bundle_encoder.Finish(&render_bundle_descriptor));
+  }
 }
 
 void webgpu_renderer::draw(vec2f const& rotation) {
@@ -761,38 +852,7 @@ void webgpu_renderer::draw(vec2f const& rotation) {
     };
     wgpu::CommandEncoder command_encoder{webgpu.device.CreateCommandEncoder(&command_encoder_descriptor)};
 
-    wgpu::RenderBundleEncoderDescriptor render_bundle_encoder_descriptor{
-      .label{"Render bundle encoder 1"},
-      .colorFormatCount{1},
-      .colorFormats{&webgpu.surface_preferred_format},
-      .depthStencilFormat{webgpu.depth_texture_format},
-    };
-    wgpu::RenderBundleEncoder render_bundle_encoder{webgpu.device.CreateRenderBundleEncoder(&render_bundle_encoder_descriptor)};
-
     {
-      // set up render bundle contents
-      render_bundle_encoder.SetPipeline(webgpu.pipeline);                       // select which render pipeline to use
-
-      // set up test buffers
-      std::vector<vertex> vertex_data{
-        {{-1.0f, -1.0f, -1.0f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}}, // bottom face normal & colour
-        {{+1.0f, -1.0f, -1.0f}, {+1.0f,  0.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}}, // right face normal & colour
-        {{+1.0f, +1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.75f, 0.0f, 1.0f}}, // front face normal & colour
-        {{-1.0f, +1.0f, -1.0f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}}, // left face normal & colour
-        {{-1.0f, -1.0f, +1.0f}, { 0.0f,  0.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}}, // normal & colour not used
-        {{+1.0f, -1.0f, +1.0f}, { 0.0f,  0.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}}, // normal & colour not used
-        {{+1.0f, +1.0f, +1.0f}, { 0.0f, +1.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}}, // top face normal & colour
-        {{-1.0f, +1.0f, +1.0f}, { 0.0f,  0.0f, +1.0f}, {1.0f, 0.75f, 0.0f, 1.0f}}, // back face normal & colour
-      };
-      std::vector<triangle_index> index_data{
-        {0, 1, 5}, {0, 5, 4},                                                   // bottom face (y = -1)
-        {1, 6, 5}, {1, 2, 6},                                                   // right face (x = +1)
-        {2, 1, 0}, {2, 0, 3},                                                   // front face (z = -1)
-        {3, 0, 4}, {3, 4, 7},                                                   // left face (x = -1)
-        {6, 3, 7}, {6, 2, 3},                                                   // top face (y = +1)
-        {7, 4, 5}, {7, 5, 6},                                                   // back face (z = +1)
-      };
-
       // set up matrices
       static vec2f angles;
       angles += rotation;
@@ -811,15 +871,10 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         {0.0f, 1.0f, 0.0f}                                                      // up dir
       )};
 
-      uniforms uniform_data{
-        .view_projection{projection * look_at},
-        .normal{mat3fwgpu{model_rotation.rotmatrix()}},
-      };
+      uniform_data.view_projection = projection * look_at;
+      uniform_data.normal = mat3fwgpu{model_rotation.rotmatrix()};
 
       // per-instance data
-      static unsigned int grid_count{50};
-      vec3ui const grid_size{grid_count, 10, grid_count};
-      unsigned int const num_instances{grid_size.x * grid_size.y * grid_size.z};
       std::vector<instance> instance_data;
       instance_data.reserve(num_instances);
       for(unsigned int y = 0; y != grid_size.y; ++y) {
@@ -831,13 +886,13 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         }
       }
 
-      // vertex buffer
-      wgpu::BufferDescriptor vertex_buffer_descriptor{
-        .label{"Vertex buffer 1"},
-        .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex},
-        .size{vertex_data.size() * sizeof(vertex_data[0])},
+      // indirect draw command data
+      indirect_data = {
+        .index_count{index_data.size() * decltype(index_data)::value_type::size()},
+        .instance_count{num_instances},
       };
-      wgpu::Buffer vertex_buffer{webgpu.device.CreateBuffer(&vertex_buffer_descriptor)};
+
+      // update buffer contents
       webgpu.queue.WriteBuffer(
         vertex_buffer,                                                          // buffer
         0,                                                                      // offset
@@ -845,13 +900,6 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         vertex_data.size() * sizeof(vertex_data[0])                             // size
       );
 
-      // instance buffer (per-instance vertex buffer)
-      wgpu::BufferDescriptor instance_buffer_descriptor{
-        .label{"Instance buffer 1"},
-        .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex},
-        .size{instance_data.size() * sizeof(instance_data[0])},
-      };
-      wgpu::Buffer instance_buffer{webgpu.device.CreateBuffer(&instance_buffer_descriptor)};
       webgpu.queue.WriteBuffer(
         instance_buffer,                                                        // buffer
         0,                                                                      // offset
@@ -859,13 +907,6 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         instance_data.size() * sizeof(instance_data[0])                         // size
       );
 
-      // index buffer
-      wgpu::BufferDescriptor index_buffer_descriptor{
-        .label{"Index buffer 1"},
-        .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Index},
-        .size{index_data.size() * sizeof(index_data[0])},
-      };
-      wgpu::Buffer index_buffer{webgpu.device.CreateBuffer(&index_buffer_descriptor)};
       webgpu.queue.WriteBuffer(
         index_buffer,                                                           // buffer
         0,                                                                      // offset
@@ -873,13 +914,6 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         index_data.size() * sizeof(index_data[0])                               // size
       );
 
-      // uniform buffer
-      wgpu::BufferDescriptor uniform_buffer_desecriptor{
-        .label{"Uniform buffer 1"},
-        .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Uniform},
-        .size{sizeof(uniform_data)},
-      };
-      wgpu::Buffer uniform_buffer{webgpu.device.CreateBuffer(&uniform_buffer_desecriptor)};
       webgpu.queue.WriteBuffer(
         uniform_buffer,                                                         // buffer
         0,                                                                      // offset
@@ -887,50 +921,12 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         sizeof(uniform_data)                                                    // size
       );
 
-      // uniform bind group
-      wgpu::BindGroupEntry bind_group_entry{
-        .binding{0},
-        .buffer{uniform_buffer},
-        .size{sizeof(uniforms)},
-      };
-      wgpu::BindGroupDescriptor bind_group_descriptor{
-        .label{"Bind group 1"},
-        .layout{webgpu.bind_group_layout},
-        .entryCount{1},                                                         // must correspond to layout
-        .entries{&bind_group_entry},
-      };
-      wgpu::BindGroup bind_group{webgpu.device.CreateBindGroup(&bind_group_descriptor)};
-
-      render_bundle_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
-      render_bundle_encoder.SetVertexBuffer(1, instance_buffer, 0, instance_buffer.GetSize()); // slot, buffer, offset, size
-      render_bundle_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
-      render_bundle_encoder.SetBindGroup(0, bind_group);                        // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
-
-      // indirect draw command buffer
-      indirect_indexed_command const indirect_data{
-        .index_count{index_data.size() * decltype(index_data)::value_type::size()},
-        .instance_count{num_instances},
-      };
-      wgpu::BufferDescriptor indirect_buffer_descriptor{
-        .label{"Indirect buffer 1"},
-        .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Indirect},
-        .size{sizeof(indirect_data)},
-      };
-      wgpu::Buffer indirect_buffer(webgpu.device.CreateBuffer(&indirect_buffer_descriptor));
       webgpu.queue.WriteBuffer(
         indirect_buffer,                                                        // buffer
         0,                                                                      // offset
         &indirect_data,                                                         // data
         sizeof(indirect_data)                                                   // size
       );
-
-      render_bundle_encoder.DrawIndexedIndirect(indirect_buffer, 0);            // indirectBuffer, indirectOffset
-
-      wgpu::RenderBundleDescriptor render_bundle_descriptor{
-        .label{"Render bundle 1"},
-      };
-      wgpu::RenderBundle render_bundle{render_bundle_encoder.Finish(&render_bundle_descriptor)};
-
 
       // set up render pass
       command_encoder.PushDebugGroup("Render pass 1");
@@ -955,7 +951,7 @@ void webgpu_renderer::draw(vec2f const& rotation) {
       };
       wgpu::RenderPassEncoder render_pass_encoder{command_encoder.BeginRenderPass(&render_pass_descriptor)};
 
-      render_pass_encoder.ExecuteBundles(1, &render_bundle);
+      render_pass_encoder.ExecuteBundles(render_bundles.size(), render_bundles.data());
 
       ImGui_ImplWGPU_RenderDrawData(ImGui::GetDrawData(), render_pass_encoder.Get()); // render the outstanding GUI draw data
 
