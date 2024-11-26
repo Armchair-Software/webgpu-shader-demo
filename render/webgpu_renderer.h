@@ -46,6 +46,8 @@ public:
   wgpu::Buffer uniform_buffer;
   wgpu::Buffer indirect_buffer;
 
+  wgpu::RenderPassDescriptor render_pass_descriptor;
+
   static unsigned int constexpr grid_count{50};
   static vec3ui constexpr grid_size{grid_count, 10, grid_count};
   static unsigned int constexpr num_instances{grid_size.x * grid_size.y * grid_size.z};

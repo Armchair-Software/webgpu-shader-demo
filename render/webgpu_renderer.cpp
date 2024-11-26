@@ -871,9 +871,6 @@ void webgpu_renderer::build_scene() {
 
 void webgpu_renderer::draw(vec2f const& rotation) {
   /// Draw a frame
-  wgpu::TextureView texture_view{webgpu.swapchain.GetCurrentTextureView()};
-  if(!texture_view) throw std::runtime_error{"Could not get current texture view from swap chain"};
-
   {
     wgpu::CommandEncoderDescriptor command_encoder_descriptor{
       .label = "Command encoder 1"
@@ -928,9 +925,13 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         &uniform_data,                                                          // data
         sizeof(uniform_data)                                                    // size
       );
-
+    }
+    {
       // set up render pass
-      command_encoder.PushDebugGroup("Render pass 1");
+      command_encoder.PushDebugGroup("Render pass group 1");
+      wgpu::TextureView texture_view{webgpu.swapchain.GetCurrentTextureView()};
+      if(!texture_view) throw std::runtime_error{"Could not get current texture view from swap chain"};
+
       wgpu::RenderPassColorAttachment render_pass_colour_attachment{
         .view{texture_view},
         .loadOp{wgpu::LoadOp::Clear},
@@ -944,12 +945,13 @@ void webgpu_renderer::draw(vec2f const& rotation) {
         .depthStoreOp{wgpu::StoreOp::Store},
         .depthClearValue{1.0f},
       };
-      wgpu::RenderPassDescriptor render_pass_descriptor{
+      render_pass_descriptor = {
         .label{"Render pass 1"},
         .colorAttachmentCount{1},
         .colorAttachments{&render_pass_colour_attachment},
         .depthStencilAttachment{&render_pass_depth_stencil_attachment},
       };
+
       wgpu::RenderPassEncoder render_pass_encoder{command_encoder.BeginRenderPass(&render_pass_descriptor)};
 
       render_pass_encoder.ExecuteBundles(render_bundles.size(), render_bundles.data());
