@@ -7,6 +7,7 @@ if (process.platform == 'win32') {
   app.commandLine.appendSwitch('enable-features', 'SkiaGraphite');
 }
 app.commandLine.appendSwitch('force-color-profile', 'srgb');
+app.commandLine.appendSwitch('disable-pinch');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -31,10 +32,10 @@ const createWindow = () => {
   //mainWindow.maximize();
   //mainWindow.setFullScreen(true);
 
-  // and load the index.html of the app.
+  mainWindow.removeMenu();
+
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-  // Open the DevTools.
   //mainWindow.webContents.openDevTools();
 };
 
