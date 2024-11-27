@@ -8,15 +8,6 @@ module.exports = {
   rebuildConfig: {},
   makers: [
     {
-      name: '@electron-forge/maker-squirrel',
-      config: {
-        authors: 'Armchair Software',
-        description: 'Armchair Software WebGPU Demo'
-        //certificateFile: './cert.pfx',
-        //certificatePassword: process.env.CERTIFICATE_PASSWORD
-      },
-    },
-    {
       name: '@electron-forge/maker-zip',
       platforms: ['linux', 'darwin', 'win32'],
     },
@@ -28,6 +19,7 @@ module.exports = {
         homepage: 'https://armchair.software'
       },
     },
+    // broken at the time of writing:
     //{
     //  name: '@electron-forge/maker-rpm',
     //  config: {
@@ -35,6 +27,24 @@ module.exports = {
     //    homepage: 'https://armchair.software'
     //  },
     //},
+    {
+      name: '@electron-forge/maker-squirrel',
+      config: {
+        authors: 'Armchair Software',
+        description: 'Armchair Software WebGPU Demo'
+        //certificateFile: './cert.pfx',
+        //certificatePassword: process.env.CERTIFICATE_PASSWORD
+      },
+    },
+    {
+      name: '@electron-forge/maker-dmg',
+      config: {
+        // see https://github.com/electron/forge/blob/ccf606325/packages/maker/dmg/src/Config.ts#L66
+        //background: './assets/dmg-background.png',
+        // LZMA - for compression formats see https://stackoverflow.com/a/77985948/1678468
+        format: 'ULMO'
+      }
+    },
   ],
   plugins: [
     {

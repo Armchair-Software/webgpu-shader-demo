@@ -93,6 +93,17 @@
   optionalDependencies:
     electron-installer-debian "^3.2.0"
 
+"@electron-forge/maker-dmg@^7.6.0":
+  version "7.6.0"
+  resolved "https://registry.npmjs.org/@electron-forge/maker-dmg/-/maker-dmg-7.6.0.tgz"
+  integrity sha512-Wa4XG9r4RldF5uy7vef5/BR8o/P+BmltZIbZulnFwhOYEu4Quj+SDF1bet7y3tM2i1am/sEocFcBHXC7CRk8xg==
+  dependencies:
+    "@electron-forge/maker-base" "7.6.0"
+    "@electron-forge/shared-types" "7.6.0"
+    fs-extra "^10.0.0"
+  optionalDependencies:
+    electron-installer-dmg "^5.0.1"
+
 "@electron-forge/maker-rpm@^7.6.0":
   version "7.6.0"
   resolved "https://registry.npmjs.org/@electron-forge/maker-rpm/-/maker-rpm-7.6.0.tgz"
@@ -525,6 +536,13 @@
   version "2.0.0"
   resolved "https://registry.npmjs.org/@tootallnate/once/-/once-2.0.0.tgz"
   integrity sha512-XCuKFP5PS55gnMVu3dty8KPatLqUoy/ZYzDzAGCQ8JNFCkLXzmI7vNHCR+XpbZaMWQK/vQubr7PkYq8g470J/A==
+
+"@types/appdmg@^0.5.5":
+  version "0.5.5"
+  resolved "https://registry.npmjs.org/@types/appdmg/-/appdmg-0.5.5.tgz"
+  integrity sha512-G+n6DgZTZFOteITE30LnWj+HRVIGr7wMlAiLWOO02uJFWVEitaPU9JVXm9wJokkgshBawb2O1OykdcsmkkZfgg==
+  dependencies:
+    "@types/node" "*"
 
 "@types/body-parser@*":
   version "1.19.5"
@@ -1581,7 +1599,7 @@ debug@^2.2.0:
   dependencies:
     ms "2.0.0"
 
-debug@^4.0.1, debug@^4.1.0, debug@^4.1.1, debug@^4.3.1, debug@^4.3.3, debug@^4.3.4, debug@4:
+debug@^4.0.1, debug@^4.1.0, debug@^4.1.1, debug@^4.3.1, debug@^4.3.2, debug@^4.3.3, debug@^4.3.4, debug@4:
   version "4.3.7"
   resolved "https://registry.npmjs.org/debug/-/debug-4.3.7.tgz"
   integrity sha512-Er2nc/H7RrMXZBFCEim6TCmMk02Z8vLC2Rbi1KEBggpo0fS6l0S1nnapwmIi3yW/+GOJap1Krg4w0Hg80oCqgQ==
@@ -1769,6 +1787,17 @@ electron-installer-debian@^3.2.0:
     lodash "^4.17.4"
     word-wrap "^1.2.3"
     yargs "^16.0.2"
+
+electron-installer-dmg@^5.0.1:
+  version "5.0.1"
+  resolved "https://registry.npmjs.org/electron-installer-dmg/-/electron-installer-dmg-5.0.1.tgz"
+  integrity sha512-qOa1aAQdX57C+vzhDk3549dd/PRlNL4F8y736MTD1a43qptD+PvHY97Bo9gSf+OZ8iUWE7BrYSpk/FgLUe40EA==
+  dependencies:
+    "@types/appdmg" "^0.5.5"
+    debug "^4.3.2"
+    minimist "^1.2.7"
+  optionalDependencies:
+    appdmg "^0.6.4"
 
 electron-installer-redhat@^3.2.0:
   version "3.4.0"
@@ -3235,7 +3264,7 @@ minimatch@^9.0.3:
   dependencies:
     brace-expansion "^2.0.1"
 
-minimist@^1.2.5, minimist@^1.2.6, minimist@^1.2.8:
+minimist@^1.2.5, minimist@^1.2.6, minimist@^1.2.7, minimist@^1.2.8:
   version "1.2.8"
   resolved "https://registry.npmjs.org/minimist/-/minimist-1.2.8.tgz"
   integrity sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==
