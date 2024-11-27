@@ -842,17 +842,17 @@ void webgpu_renderer::build_scene() {
 
   // populate buffer contents
   webgpu.queue.WriteBuffer(
-    vertex_buffer,                                                          // buffer
-    0,                                                                      // offset
-    vertex_data.data(),                                                     // data
-    vertex_data.size() * sizeof(vertex_data[0])                             // size
+    vertex_buffer,                                                              // buffer
+    0,                                                                          // offset
+    vertex_data.data(),                                                         // data
+    vertex_data.size() * sizeof(vertex_data[0])                                 // size
   );
 
   webgpu.queue.WriteBuffer(
-    index_buffer,                                                           // buffer
-    0,                                                                      // offset
-    index_data.data(),                                                      // data
-    index_data.size() * sizeof(index_data[0])                               // size
+    index_buffer,                                                               // buffer
+    0,                                                                          // offset
+    index_data.data(),                                                          // data
+    index_data.size() * sizeof(index_data[0])                                   // size
   );
 
   // indirect draw command data
@@ -862,10 +862,10 @@ void webgpu_renderer::build_scene() {
   };
 
   webgpu.queue.WriteBuffer(
-    indirect_buffer,                                                        // buffer
-    0,                                                                      // offset
-    &indirect_data,                                                         // data
-    sizeof(indirect_data)                                                   // size
+    indirect_buffer,                                                            // buffer
+    0,                                                                          // offset
+    &indirect_data,                                                             // data
+    sizeof(indirect_data)                                                       // size
   );
 }
 
