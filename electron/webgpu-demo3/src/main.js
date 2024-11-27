@@ -19,11 +19,13 @@ const createWindow = () => {
   console.log('DEBUG: createWindow: MAIN_WINDOW_WEBPACK_ENTRY ' + MAIN_WINDOW_WEBPACK_ENTRY);
 
   const mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 720,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
+    width: 1280,
+    height: 720,
+    //fullscreen: true,
+    title: "Armchair Engine WebGPU Electron Forge Demo",
   });
 
   //mainWindow.maximize();
@@ -33,7 +35,7 @@ const createWindow = () => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  //mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished
