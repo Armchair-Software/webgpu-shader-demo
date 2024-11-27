@@ -1,10 +1,11 @@
 import { app, BrowserWindow } from 'electron';
-import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
 app.commandLine.appendSwitch('enable-unsafe-webgpu');
 app.commandLine.appendSwitch('enable-features', 'Vulkan');
-//app.commandLine.appendSwitch('disable-color-correct-rendering');
+if (process.platform == 'win32') {
+  app.commandLine.appendSwitch('enable-features', 'SkiaGraphite');
+}
 app.commandLine.appendSwitch('force-color-profile', 'srgb');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -14,6 +15,9 @@ if (started) {
 
 const createWindow = () => {
   // Create the browser window.
+  console.log('DEBUG: createWindow: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY ' + MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY);
+  console.log('DEBUG: createWindow: MAIN_WINDOW_WEBPACK_ENTRY ' + MAIN_WINDOW_WEBPACK_ENTRY);
+
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
@@ -22,8 +26,8 @@ const createWindow = () => {
     },
   });
 
-  mainWindow.maximize();
-  mainWindow.setFullScreen(true);
+  //mainWindow.maximize();
+  //mainWindow.setFullScreen(true);
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
