@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Cache EMSDK
+    - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
         path: ~/.emscripten_cache
@@ -24,12 +24,17 @@ jobs:
         version: 3.1.71
     - name: Build
       run: ./build.sh
+    - name: Save Emscripten cache
+      uses: actions/cache@v3
+      with:
+        path: ~/.emscripten_cache
+        key: ${{ runner.os }}-emsdk-${{ hashFiles('emscripten-requirements.txt') }}
 
   build-rel:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - name: Cache EMSDK
+    - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
         path: ~/.emscripten_cache
@@ -47,6 +52,11 @@ jobs:
         mkdir deploy
         cp build_rel/client.* deploy/
         mv deploy/client.html deploy/index.html
+    - name: Save Emscripten cache
+      uses: actions/cache@v3
+      with:
+        path: ~/.emscripten_cache
+        key: ${{ runner.os }}-emsdk-${{ hashFiles('emscripten-requirements.txt') }}
     - name: Upload files for later stages
       uses: actions/upload-artifact@v4
       with:
