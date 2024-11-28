@@ -9,58 +9,48 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      EMSDK_VERSION: 3.1.71
     steps:
     - uses: actions/checkout@v4
     - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
-        path: $HOME/emsdk-main
-        key: ${{ runner.os }}-emsdk-${{ inputs.version }}
+        path: ${{ env.EMSDK }}
+        key: ${{ runner.os }}-emsdk-${{ env.EMSDK_VERSION }}
         restore-keys: |
           ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
       with:
-        version: 3.1.71
+        version: ${{ env.EMSDK_VERSION }}
     - name: Build
       run: ./build.sh
-    - name: Save Emscripten cache
-      uses: actions/cache@v3
-      with:
-        path: $HOME/emsdk-main
-        key: ${{ runner.os }}-emsdk-${{ inputs.version }}
 
   build-rel:
     runs-on: ubuntu-latest
+    env:
+      EMSDK_VERSION: 3.1.71
     steps:
     - uses: actions/checkout@v4
     - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
-        path: $HOME/emsdk-main
-        key: ${{ runner.os }}-emsdk-${{ inputs.version }}
+        path: ${{ env.EMSDK }}
+        key: ${{ runner.os }}-emsdk-${{ env.EMSDK_VERSION }}
         restore-keys: |
           ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
       with:
-        version: 3.1.71
+        version: ${{ env.EMSDK_VERSION }}
     - name: build-rel
-      run: |
-        ls -alh
-        ls -alh ~
-        ls -alh "$HOME"
-        CMAKE_BUILD_TYPE=Release ./build.sh
+      run: CMAKE_BUILD_TYPE=Release ./build.sh
     - name: Stage files for upload to GitHub Pages
       run: |
         mkdir deploy
         cp build_rel/client.* deploy/
         mv deploy/client.html deploy/index.html
-    - name: Save Emscripten cache
-      uses: actions/cache@v3
-      with:
-        path: $HOME/emsdk-main
-        key: ${{ runner.os }}-emsdk-${{ inputs.version }}
     - name: Upload files for later stages
       uses: actions/upload-artifact@v4
       with:
