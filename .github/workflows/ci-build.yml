@@ -18,8 +18,6 @@ jobs:
       with:
         path: ${{ runner.temp }}/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}-debug
-        restore-keys: |
-          ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
       with:
@@ -38,8 +36,6 @@ jobs:
       with:
         path: ${{ runner.temp }}/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}-rel
-        restore-keys: |
-          ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
       with:
