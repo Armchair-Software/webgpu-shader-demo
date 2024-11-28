@@ -14,7 +14,7 @@ jobs:
     - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ~/.emscripten_cache
+        path: ~/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ hashFiles('emscripten-requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-emsdk-
@@ -27,7 +27,7 @@ jobs:
     - name: Save Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ~/.emscripten_cache
+        path: ~/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ hashFiles('emscripten-requirements.txt') }}
 
   build-rel:
@@ -37,7 +37,7 @@ jobs:
     - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ~/.emscripten_cache
+        path: ~/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ hashFiles('emscripten-requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-emsdk-
@@ -55,7 +55,7 @@ jobs:
     - name: Save Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ~/.emscripten_cache
+        path: ~/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ hashFiles('emscripten-requirements.txt') }}
     - name: Upload files for later stages
       uses: actions/upload-artifact@v4
