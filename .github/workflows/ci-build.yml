@@ -20,7 +20,7 @@ jobs:
     - name: Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ${{ runner.temp }}/emsdk-main
+        path: ${{ runner.temp }}/${{ github.run_id }}/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}-debug
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
@@ -42,7 +42,7 @@ jobs:
     - name: Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ${{ runner.temp }}/emsdk-main
+        path: ${{ runner.temp }}/${{ github.run_id }}/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}-rel
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
