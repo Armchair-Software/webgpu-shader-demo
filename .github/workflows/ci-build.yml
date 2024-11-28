@@ -13,6 +13,10 @@ jobs:
       EMSCRIPTEN_VERSION: 3.1.71
     steps:
     - uses: actions/checkout@v4
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ runner.os }}-ccache-${{ env.EMSCRIPTEN_VERSION }}-debug
     - name: Emscripten cache
       uses: actions/cache@v3
       with:
@@ -31,6 +35,10 @@ jobs:
       EMSCRIPTEN_VERSION: 3.1.71
     steps:
     - uses: actions/checkout@v4
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ runner.os }}-ccache-${{ env.EMSCRIPTEN_VERSION }}-rel
     - name: Emscripten cache
       uses: actions/cache@v3
       with:
