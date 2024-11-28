@@ -94,13 +94,7 @@ jobs:
         path: ./deploy
     - name: Copy artifact to Electron
       run: |
-        ls -alh
-        ls -alh deploy
-        ls -alh electron/webgpu-demo3/src
-        cp deploy/client.* electron/webgpu-demo3/src
-        ls -alh electron/webgpu-demo3/src
-        mv electron/webgpu-demo3/src/client.html electron/webgpu-demo3/src/index.html
-        ls -alh electron/webgpu-demo3/src
+        mv deploy/* electron/webgpu-demo3/src/
     - name: Build
       run: |
         cd electron/webgpu-demo3
