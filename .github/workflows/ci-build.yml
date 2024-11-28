@@ -72,7 +72,7 @@ jobs:
     - name: Deploy to GitHub Pages
       uses: actions/deploy-pages@v4
 
-  build-electron:
+  build-electron-linux:
     runs-on: ubuntu-latest
     needs: build-rel
     steps:
@@ -94,7 +94,56 @@ jobs:
         cd electron/webgpu-demo3
         npm install
         npm run make -- --platform linux
+    # TODO: publish
+    # TODO: cache node
+
+  build-electron-win32:
+    runs-on: ubuntu-latest
+    needs: build-rel
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node toolchain
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - name: Download artifacts from build-rel
+      uses: actions/download-artifact@v4
+      with:
+        name: build-rel-artifacts
+        path: ./deploy
+    - name: Copy artifact to Electron
+      run: |
+        mv deploy/* electron/webgpu-demo3/src/
+    - name: Build
+      run: |
+        cd electron/webgpu-demo3
+        npm install
         npm run make -- --platform win32
-        #npm run make -- --platform darwin
+    # TODO: publish
+    # TODO: cache node
+
+  build-electron-darwin:
+    if: false # Stage disabled
+    runs-on: ubuntu-latest
+    needs: build-rel
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup Node toolchain
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - name: Download artifacts from build-rel
+      uses: actions/download-artifact@v4
+      with:
+        name: build-rel-artifacts
+        path: ./deploy
+    - name: Copy artifact to Electron
+      run: |
+        mv deploy/* electron/webgpu-demo3/src/
+    - name: Build
+      run: |
+        cd electron/webgpu-demo3
+        npm install
+        npm run make -- --platform darwin
     # TODO: publish
     # TODO: cache node
