@@ -13,7 +13,7 @@ jobs:
       EMSCRIPTEN_VERSION: 3.1.71
     steps:
     - uses: actions/checkout@v4
-    - name: Restore Emscripten cache
+    - name: Emscripten cache
       uses: actions/cache@v3
       with:
         path: ${{ github.workspace }}/emsdk-main
@@ -33,7 +33,7 @@ jobs:
       EMSCRIPTEN_VERSION: 3.1.71
     steps:
     - uses: actions/checkout@v4
-    - name: Restore Emscripten cache
+    - name: Emscripten cache
       uses: actions/cache@v3
       with:
         path: ${{ github.workspace }}/emsdk-main
@@ -61,7 +61,7 @@ jobs:
       with:
         path: ./deploy
 
-  deploy:
+  deploy-pages:
     if: false # Stage disabled
     runs-on: ubuntu-latest
     needs: build-rel
