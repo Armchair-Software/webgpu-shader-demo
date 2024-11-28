@@ -10,40 +10,40 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      EMSDK_VERSION: 3.1.71
+      EMSCRIPTEN_VERSION: 3.1.71
     steps:
     - uses: actions/checkout@v4
     - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ${{ env.EMSDK }}
-        key: ${{ runner.os }}-emsdk-${{ env.EMSDK_VERSION }}
+        path: ${{ env.HOME }}/emsdk-main
+        key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}
         restore-keys: |
           ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
       with:
-        version: ${{ env.EMSDK_VERSION }}
+        version: ${{ env.EMSCRIPTEN_VERSION }}
     - name: Build
       run: ./build.sh
 
   build-rel:
     runs-on: ubuntu-latest
     env:
-      EMSDK_VERSION: 3.1.71
+      EMSCRIPTEN_VERSION: 3.1.71
     steps:
     - uses: actions/checkout@v4
     - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ${{ env.EMSDK }}
-        key: ${{ runner.os }}-emsdk-${{ env.EMSDK_VERSION }}
+        path: ${{ env.HOME }}/emsdk-main
+        key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}
         restore-keys: |
           ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
       with:
-        version: ${{ env.EMSDK_VERSION }}
+        version: ${{ env.EMSCRIPTEN_VERSION }}
     - name: build-rel
       run: CMAKE_BUILD_TYPE=Release ./build.sh
     - name: Stage files for upload to GitHub Pages
