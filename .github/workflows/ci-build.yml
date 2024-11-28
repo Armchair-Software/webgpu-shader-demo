@@ -11,6 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Cache EMSDK
+      uses: actions/cache@v3
+      with:
+        path: ~/.emscripten_cache
+        key: ${{ runner.os }}-emsdk-${{ hashFiles('emscripten-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
       with:
@@ -22,6 +29,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Cache EMSDK
+      uses: actions/cache@v3
+      with:
+        path: ~/.emscripten_cache
+        key: ${{ runner.os }}-emsdk-${{ hashFiles('emscripten-requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
       uses: mymindstorm/setup-emsdk@v14
       with:
