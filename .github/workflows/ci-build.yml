@@ -16,7 +16,7 @@ jobs:
     - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ${{ env.HOME }}/emsdk-main
+        path: ${{ github.workspace }}/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}-debug
         restore-keys: |
           ${{ runner.os }}-emsdk-
@@ -36,7 +36,7 @@ jobs:
     - name: Restore Emscripten cache
       uses: actions/cache@v3
       with:
-        path: ${{ env.HOME }}/emsdk-main
+        path: ${{ github.workspace }}/emsdk-main
         key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}-rel
         restore-keys: |
           ${{ runner.os }}-emsdk-
