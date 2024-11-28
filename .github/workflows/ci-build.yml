@@ -90,7 +90,7 @@ jobs:
       with:
         name: build-rel-artifacts
         path: ./deploy
-    - name: Copy artifact to Electron
+    - name: Copy artifacts to Electron
       run: |
         mv deploy/* electron/webgpu-demo3/src/
     - name: Build
@@ -102,7 +102,7 @@ jobs:
     # TODO: cache node
 
   build-electron-win32:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: build-rel
     steps:
     - uses: actions/checkout@v4
@@ -115,12 +115,12 @@ jobs:
       with:
         name: build-rel-artifacts
         path: ./deploy
-    - name: Copy artifact to Electron
+    - name: Copy artifacts to Electron
       run: |
-        mv deploy/* electron/webgpu-demo3/src/
+        Move-Item -Path "deploy\*" -Destination "electron\webgpu-demo3\src"
     - name: Build
       run: |
-        cd electron/webgpu-demo3
+        cd electron\webgpu-demo3
         npm install
         npm run make -- --platform win32
     # TODO: publish
@@ -141,7 +141,7 @@ jobs:
       with:
         name: build-rel-artifacts
         path: ./deploy
-    - name: Copy artifact to Electron
+    - name: Copy artifacts to Electron
       run: |
         mv deploy/* electron/webgpu-demo3/src/
     - name: Build
