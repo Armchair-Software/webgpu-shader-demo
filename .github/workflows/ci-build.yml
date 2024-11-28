@@ -17,7 +17,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{ env.HOME }}/emsdk-main
-        key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}
+        key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}-debug
         restore-keys: |
           ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
@@ -37,7 +37,7 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ${{ env.HOME }}/emsdk-main
-        key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}
+        key: ${{ runner.os }}-emsdk-${{ env.EMSCRIPTEN_VERSION }}-rel
         restore-keys: |
           ${{ runner.os }}-emsdk-
     - name: Setup Emscripten toolchain
