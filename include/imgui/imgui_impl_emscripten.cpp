@@ -364,11 +364,6 @@ void ImGui_ImplEmscripten_Init() {
   // set up initial display size values
   imgui_io.DisplaySize.x = emscripten::val::global("window")["innerWidth"].as<float>();
   imgui_io.DisplaySize.y = emscripten::val::global("window")["innerHeight"].as<float>();
-  {
-    auto const device_pixel_ratio{emscripten::val::global("window")["devicePixelRatio"].as<float>()};
-    imgui_io.DisplayFramebufferScale.x = device_pixel_ratio;
-    imgui_io.DisplayFramebufferScale.y = device_pixel_ratio;
-  }
 
   emscripten_set_mousemove_callback(
     EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
@@ -480,7 +475,7 @@ void ImGui_ImplEmscripten_Init() {
     EMSCRIPTEN_EVENT_TARGET_WINDOW,                                             // target
     nullptr,                                                                    // userData
     false,                                                                      // useCapture
-    [](int /*event_type*/, EmscriptenUiEvent const *event, void */*data*/) {   // event_type == EMSCRIPTEN_EVENT_RESIZE
+    [](int /*event_type*/, EmscriptenUiEvent const *event, void */*data*/) {    // event_type == EMSCRIPTEN_EVENT_RESIZE
       auto &imgui_io{ImGui::GetIO()};
       imgui_io.DisplaySize.x = static_cast<float>(event->windowInnerWidth);
       imgui_io.DisplaySize.y = static_cast<float>(event->windowInnerHeight);
