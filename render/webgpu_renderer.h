@@ -29,6 +29,7 @@ public:
 
     wgpu::Texture depth_texture;                                                // depth buffer
     wgpu::TextureView depth_texture_view;
+    // TODO: rip out depth texture
 
     wgpu::TextureFormat surface_preferred_format{wgpu::TextureFormat::Undefined}; // preferred texture format for this surface
     static constexpr wgpu::TextureFormat depth_texture_format{wgpu::TextureFormat::Depth24Plus}; // what format to use for the depth texture
@@ -41,38 +42,23 @@ public:
   // TODO, rearrange scene content meaningfully
   std::vector<wgpu::RenderBundle> render_bundles;
   wgpu::Buffer vertex_buffer;
-  wgpu::Buffer instance_buffer;
   wgpu::Buffer index_buffer;
   wgpu::Buffer uniform_buffer;
-  wgpu::Buffer indirect_buffer;
 
   wgpu::RenderPassDescriptor render_pass_descriptor;
 
-  static unsigned int constexpr grid_count{50};
-  static vec3ui constexpr grid_size{grid_count, 10, grid_count};
-  static unsigned int constexpr num_instances{grid_size.x * grid_size.y * grid_size.z};
-
   uniforms uniform_data;
-  indirect_indexed_command indirect_data;
 
   std::vector<vertex> vertex_data{
-    {{-1.0f, -1.0f, -1.0f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}},  // bottom face normal & colour
-    {{+1.0f, -1.0f, -1.0f}, {+1.0f,  0.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}},  // right face normal & colour
-    {{+1.0f, +1.0f, -1.0f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.75f, 0.0f, 1.0f}},  // front face normal & colour
-    {{-1.0f, +1.0f, -1.0f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}},  // left face normal & colour
-    {{-1.0f, -1.0f, +1.0f}, { 0.0f,  0.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}},  // normal & colour not used
-    {{+1.0f, -1.0f, +1.0f}, { 0.0f,  0.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}},  // normal & colour not used
-    {{+1.0f, +1.0f, +1.0f}, { 0.0f, +1.0f,  0.0f}, {1.0f, 0.75f, 0.0f, 1.0f}},  // top face normal & colour
-    {{-1.0f, +1.0f, +1.0f}, { 0.0f,  0.0f, +1.0f}, {1.0f, 0.75f, 0.0f, 1.0f}},  // back face normal & colour
+    {{-1.0f, -1.0f}, {0.0f, 0.0f}},
+    {{ 1.0f, -1.0f}, {1.0f, 0.0f}},
+    {{-1.0f,  1.0f}, {0.0f, 1.0f}},
+    {{ 1.0f,  1.0f}, {1.0f, 1.0f}},
   };
 
   std::vector<triangle_index> index_data{
-    {0, 1, 5}, {0, 5, 4},                                                       // bottom face (y = -1)
-    {1, 6, 5}, {1, 2, 6},                                                       // right face (x = +1)
-    {2, 1, 0}, {2, 0, 3},                                                       // front face (z = -1)
-    {3, 0, 4}, {3, 4, 7},                                                       // left face (x = -1)
-    {6, 3, 7}, {6, 2, 3},                                                       // top face (y = +1)
-    {7, 4, 5}, {7, 5, 6},                                                       // back face (z = +1)
+    {0, 1, 2},
+    {2, 1, 3},
   };
 
 private:

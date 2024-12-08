@@ -9,7 +9,6 @@
 #include <emscripten/val.h>
 #include <imgui/imgui_impl_wgpu.h>
 #include <magic_enum/magic_enum.hpp>
-#include "vectorstorm/matrix/matrix3.h"
 #include "sqrt_constexpr.h"
 #include "instance.h"
 #include "shaders/default.wgsl.h"
@@ -18,52 +17,6 @@
 namespace render {
 
 namespace {
-mat4f make_projection_matrix(vec2f const &viewport_size) {
-  /// Set up a projection matrix based on the FOV and the relevant planes
-  enum class fov_mode_type {                                                    // how we set the field of view
-    horizontal,                                                                 // field of view measures max horizontal angle of view
-    vertical,                                                                   // field of view measures max vertical angle of view
-    diagonal,                                                                   // field of view measures max diagonal angle of view
-  } fov_mode{fov_mode_type::diagonal};
-
-  float fov_angle{110.0f};                                                      // field of view, in degrees
-  float fov_angle_rad{DEG2RAD(fov_angle)};                                      // field of view, in radians - automatically updated from degrees
-  float clip_plane_near{1.0f};                                                  // near clip plane
-  float clip_plane_far{100'000.0f};                                             // far clip plane
-
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic error "-Wswitch"                                       // enforce exhaustive switch here
-  switch(fov_mode) {
-  #pragma GCC diagnostic pop
-  case fov_mode_type::horizontal:
-    {
-      float const aspect_ratio{viewport_size.y / viewport_size.x};
-      float const right{std::tan(fov_angle_rad * 0.5f) * clip_plane_near};
-      float const top{right * aspect_ratio};
-      //logger << "DEBUG: horizontal aspect_ratio " << aspect_ratio;
-      return mat4f::create_frustum(-right, right, -top, top, clip_plane_near, clip_plane_far);
-    }
-  case fov_mode_type::vertical:
-    {
-      float const aspect_ratio{viewport_size.x / viewport_size.y};
-      float const top{std::tan(fov_angle_rad * 0.5f) * clip_plane_near};
-      float const right{top * aspect_ratio};
-      //logger << "DEBUG: vertical aspect_ratio " << aspect_ratio;
-      return mat4f::create_frustum(-right, right, -top, top, clip_plane_near, clip_plane_far);
-    }
-  case fov_mode_type::diagonal:
-    {
-      float const diagonal{std::tan(fov_angle_rad * 0.5f) * clip_plane_near};
-      float const viewport_diagonal{viewport_size.length()};
-      float const right{diagonal * (viewport_size.x / viewport_diagonal)};
-      float const top{  diagonal * (viewport_size.y / viewport_diagonal)};
-      //logger << "DEBUG: diagonal aspect_ratio " << viewport_size.x / viewport_size.y;
-      return mat4f::create_frustum(-right, right, -top, top, clip_plane_near, clip_plane_far);
-    }
-    // no default case, to enforce exhaustive switch
-  }
-  std::unreachable();
-}
 
 template<typename Tcpp, typename Tc>
 std::string enum_wgpu_name(Tc enum_in) {
@@ -259,8 +212,6 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
           #ifndef NDEBUG
             wgpu::FeatureName::TimestampQuery,
           #endif // NDEBUG
-          wgpu::FeatureName::TextureCompressionBC,
-          wgpu::FeatureName::IndirectFirstInstance,
         };
         std::set<wgpu::FeatureName> desired_features{
           wgpu::FeatureName::ShaderF16,
@@ -598,41 +549,14 @@ void webgpu_renderer::configure() {
 
     std::array vertex_attributes{
       wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x3},
+        .format{wgpu::VertexFormat::Float32x2},
         .offset{offsetof(vertex, position)},
         .shaderLocation{0},
       },
       wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x3},
-        .offset{offsetof(vertex, normal)},
+        .format{wgpu::VertexFormat::Float32x2},
+        .offset{offsetof(vertex, uv)},
         .shaderLocation{1},
-      },
-      wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x4},
-        .offset{offsetof(vertex, colour)},
-        .shaderLocation{2},
-      },
-    };
-    std::array instance_attributes{
-      wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x4},                                 // we want a mat4, so we pass four vec4 rows per instance - see https://www.reddit.com/r/vulkan/comments/8zx1hn/comment/e2m2diq/
-        .offset{offsetof(instance, model) + (sizeof(float) * 4 * 0)},
-        .shaderLocation{3},
-      },
-      wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x4},
-        .offset{offsetof(instance, model) + (sizeof(float) * 4 * 1)},
-        .shaderLocation{4},
-      },
-      wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x4},
-        .offset{offsetof(instance, model) + (sizeof(float) * 4 * 2)},
-        .shaderLocation{5},
-      },
-      wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x4},
-        .offset{offsetof(instance, model) + (sizeof(float) * 4 * 3)},
-        .shaderLocation{6},
       },
     };
     std::vector<wgpu::VertexBufferLayout> vertex_buffer_layouts{
@@ -640,12 +564,6 @@ void webgpu_renderer::configure() {
         .arrayStride{sizeof(vertex)},
         .attributeCount{vertex_attributes.size()},
         .attributes{vertex_attributes.data()},
-      },
-      {
-        .arrayStride{sizeof(instance)},
-        .stepMode{wgpu::VertexStepMode::Instance},                              // per-instance buffer
-        .attributeCount{instance_attributes.size()},
-        .attributes{instance_attributes.data()},
       },
     };
 
@@ -765,15 +683,6 @@ void webgpu_renderer::build_scene() {
     vertex_buffer = webgpu.device.CreateBuffer(&vertex_buffer_descriptor);
   }
   {
-    // instance buffer (per-instance vertex buffer)
-    wgpu::BufferDescriptor instance_buffer_descriptor{
-      .label{"Instance buffer 1"},
-      .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Vertex},
-      .size{num_instances * sizeof(instance)},
-    };
-    instance_buffer = webgpu.device.CreateBuffer(&instance_buffer_descriptor);
-  }
-  {
     // index buffer
     wgpu::BufferDescriptor index_buffer_descriptor{
       .label{"Index buffer 1"},
@@ -790,16 +699,6 @@ void webgpu_renderer::build_scene() {
       .size{sizeof(uniform_data)},
     };
     uniform_buffer = webgpu.device.CreateBuffer(&uniform_buffer_desecriptor);
-  }
-
-  // indirect draw command buffer
-  {
-    wgpu::BufferDescriptor indirect_buffer_descriptor{
-      .label{"Indirect buffer 1"},
-      .usage{wgpu::BufferUsage::CopyDst | wgpu::BufferUsage::Indirect},
-      .size{sizeof(indirect_data)},
-    };
-    indirect_buffer = webgpu.device.CreateBuffer(&indirect_buffer_descriptor);
   }
 
   // uniform bind group
@@ -828,11 +727,10 @@ void webgpu_renderer::build_scene() {
 
     render_bundle_encoder.SetPipeline(webgpu.pipeline);                         // select which render pipeline to use
     render_bundle_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
-    render_bundle_encoder.SetVertexBuffer(1, instance_buffer, 0, instance_buffer.GetSize()); // slot, buffer, offset, size
     render_bundle_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
     render_bundle_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
 
-    render_bundle_encoder.DrawIndexedIndirect(indirect_buffer, 0);              // indirectBuffer, indirectOffset
+    render_bundle_encoder.DrawIndexed(index_data.size() * decltype(index_data)::value_type::size()); // indexCount, instanceCount = 1, firstIndex = 0, baseVertex = 0, firstInstance = 0
 
     wgpu::RenderBundleDescriptor render_bundle_descriptor{
       .label{"Render bundle 1"},
@@ -854,78 +752,27 @@ void webgpu_renderer::build_scene() {
     index_data.data(),                                                          // data
     index_data.size() * sizeof(index_data[0])                                   // size
   );
-
-  // indirect draw command data
-  indirect_data = {
-    .index_count{index_data.size() * decltype(index_data)::value_type::size()},
-    .instance_count{num_instances},
-  };
-
-  webgpu.queue.WriteBuffer(
-    indirect_buffer,                                                            // buffer
-    0,                                                                          // offset
-    &indirect_data,                                                             // data
-    sizeof(indirect_data)                                                       // size
-  );
 }
 
-void webgpu_renderer::draw(vec2f const& rotation) {
+void webgpu_renderer::draw(vec2f const& input) {
   /// Draw a frame
+  {
+    // set up uniform data
+    uniform_data.input = input;
+
+    webgpu.queue.WriteBuffer(
+      uniform_buffer,                                                           // buffer
+      0,                                                                        // offset
+      &uniform_data,                                                            // data
+      sizeof(uniform_data)                                                      // size
+    );
+  }
   {
     wgpu::CommandEncoderDescriptor command_encoder_descriptor{
       .label = "Command encoder 1"
     };
     wgpu::CommandEncoder command_encoder{webgpu.device.CreateCommandEncoder(&command_encoder_descriptor)};
 
-    {
-      // set up matrices
-      static vec2f angles;
-      angles += rotation;
-      angles.x += 0.01f;                                                        // constant slow spin
-      quatf model_rotation{quatf::from_euler_angles_rad(0.0, angles.x, 0.0)};
-
-      vec3f camera_pos{0.0f, 10.0f, -25.0f};
-      camera_pos.rotate_rad_x(angles.y);
-
-      mat4f projection{make_projection_matrix(static_cast<vec2f>(window.viewport_size))};
-      // TODO: reversed Z matrix adaptations: https://webgpu.github.io/webgpu-samples/?sample=reversedZ
-
-      mat4f look_at{mat4f::create_look_at(
-        camera_pos,                                                             // eye pos
-        {0.0f, 0.0f, 0.0f},                                                     // target pos
-        {0.0f, 1.0f, 0.0f}                                                      // up dir
-      )};
-
-      uniform_data.view_projection = projection * look_at;
-      uniform_data.normal = mat3fwgpu{model_rotation.rotmatrix()};
-
-      // per-instance data
-      std::vector<instance> instance_data;
-      instance_data.reserve(num_instances);
-      for(unsigned int y = 0; y != grid_size.y; ++y) {
-        for(unsigned int z = 0; z != grid_size.z; ++z) {
-          for(unsigned int x = 0; x != grid_size.x; ++x) {
-            mat4f const offset{mat4f::create_translation(((vec3f{vec3ui{x, y, z}} - (vec3f{grid_size} * 0.5f)) * 3.0f) + vec3f{0.0f, 0.0f, 70.0f})};
-            instance_data.emplace_back(offset * model_rotation.transform());
-          }
-        }
-      }
-
-      // update buffer contents
-      webgpu.queue.WriteBuffer(
-        instance_buffer,                                                        // buffer
-        0,                                                                      // offset
-        instance_data.data(),                                                   // data
-        instance_data.size() * sizeof(instance_data[0])                         // size
-      );
-
-      webgpu.queue.WriteBuffer(
-        uniform_buffer,                                                         // buffer
-        0,                                                                      // offset
-        &uniform_data,                                                          // data
-        sizeof(uniform_data)                                                    // size
-      );
-    }
     {
       // set up render pass
       command_encoder.PushDebugGroup("Render pass group 1");
@@ -960,34 +807,14 @@ void webgpu_renderer::draw(vec2f const& rotation) {
 
       // TODO: add timestamp query: https://eliemichel.github.io/LearnWebGPU/advanced-techniques/benchmarking/time.html / https://webgpu.github.io/webgpu-samples/?sample=timestampQuery
 
-      // TODO: occlusion queries https://webgpu.github.io/webgpu-samples/?sample=occlusionQuery#main.ts
-
-      // TODO: wireframe rendering pipeline per barycentric coordinates https://webgpu.github.io/webgpu-samples/?sample=wireframe#main.ts
-      // TODO: render bundle culling https://github.com/toji/webgpu-bundle-culling
-
       render_pass_encoder.End();
       command_encoder.PopDebugGroup();
     }
-
-    command_encoder.InsertDebugMarker("Debug marker 1");
 
     wgpu::CommandBufferDescriptor command_buffer_descriptor {
       .label = "Command buffer 1"
     };
     wgpu::CommandBuffer command_buffer{command_encoder.Finish(&command_buffer_descriptor)};
-
-    //webgpu.queue.OnSubmittedWorkDone(
-    //  [](WGPUQueueWorkDoneStatus status_c, void *data){
-    //    /// Submitted work done callback - note, this only fires for the subsequent submit
-    //    auto &renderer{*static_cast<webgpu_renderer*>(data)};
-    //    auto &logger{renderer.logger};
-    //    if(auto const status{static_cast<wgpu::QueueWorkDoneStatus>(status_c)}; status != wgpu::QueueWorkDoneStatus::Success) {
-    //      logger << "ERROR: WebGPU queue submitted work failure, status: " << enum_wgpu_name<wgpu::QueueWorkDoneStatus>(status_c);
-    //    }
-    //    logger << "DEBUG: WebGPU queue submitted work done";
-    //  },
-    //  this
-    //);
 
     webgpu.queue.Submit(1, &command_buffer);
   }

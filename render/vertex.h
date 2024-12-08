@@ -1,15 +1,13 @@
 #pragma once
 
-#include "vectorstorm/vector/vector3.h"
-#include "vectorstorm/vector/vector4.h"
+#include "vectorstorm/vector/vector2.h"
 
 namespace render {
 
 struct vertex {
-  vec3f position;
-  vec3f normal;
-  vec4f colour;
+  vec2f position;
+  vec2f uv;
 };
-static_assert(sizeof(vertex) == sizeof(vertex::position) + sizeof(vertex::normal) + sizeof(vertex::colour)); // make sure the struct is packed
+static_assert(sizeof(vertex) == sizeof(vertex::position) + sizeof(vertex::uv)); // make sure the struct is packed
 
 }
