@@ -7,7 +7,9 @@ For the previous demos, see:
 - https://github.com/Armchair-Software/webgpu-demo2
 - https://github.com/Armchair-Software/boids-webgpu-demo
 
-This demo just renders a simple full-screen quad, useful for testing shaders.
+This demo just renders a simple full-screen quad, useful for testing shaders.  There is a minimal integrated editor for the shader code.
+
+![image](https://github.com/user-attachments/assets/7b2b1e46-3ac0-411b-9047-615a2c7305c8)
 
 ## Live demo
 Live demo: https://armchair-software.github.io/webgpu-shader-demo/
