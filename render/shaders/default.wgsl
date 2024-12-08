@@ -10,7 +10,6 @@ struct vertex_output {
 
 struct uniform_struct {
   interactive_input: vec2f,
-  // TODO: use this
 };
 
 @group(0) @binding(0) var<uniform> uniforms: uniform_struct;
@@ -46,7 +45,7 @@ fn mandelbrot(c: vec2f) -> mandelbrot_out {
 fn vs_main(in: vertex_input) -> vertex_output {
   var out: vertex_output;
   out.position = vec4f(in.position, 0.0, 1.0);
-  out.uv = in.uv;
+  out.uv = in.uv + uniforms.interactive_input;
   return out;
 }
 

@@ -4,7 +4,7 @@
 
 namespace render::shaders {
 
-inline constexpr char const *default_wgsl{R"890c9c6d52412f30(struct vertex_input {
+inline constexpr char const *default_wgsl{R"bdb11fea3583576b(struct vertex_input {
   @location(0) position: vec2f,
   @location(1) uv: vec2f,
 };
@@ -29,7 +29,7 @@ fn mandelbrot(c: vec2f) -> mandelbrot_out {
       z.x * z.x - z.y * z.y,
       2.0 * z.x * z.y
     ) + c;
-    if(dot(z, z) > 4096.0) {
+    if(dot(z, z) > 128.0) {
       out.unbounded = f32(i) - log2(log2(dot(z, z)));
       return out;
     }
@@ -43,7 +43,7 @@ fn mandelbrot(c: vec2f) -> mandelbrot_out {
 fn vs_main(in: vertex_input) -> vertex_output {
   var out: vertex_output;
   out.position = vec4f(in.position, 0.0, 1.0);
-  out.uv = in.uv;
+  out.uv = in.uv + uniforms.interactive_input;
   return out;
 }
 @fragment
@@ -60,6 +60,6 @@ fn fs_main(in: vertex_output) -> @location(0) vec4f {
   );
   return vec4f(color, 1.0);
 }
-)890c9c6d52412f30"};
+)bdb11fea3583576b"};
 
 } // namespace render::shaders

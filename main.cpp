@@ -14,6 +14,8 @@ class game_manager {
   render::webgpu_renderer renderer{logger};                                     // WebGPU rendering system
   gui::gui_renderer gui{logger};                                                // GUI top level
 
+  vec2f mouse_pos_rel{};                                                        // relative mouse position
+
   void loop_main();
 
 public:
@@ -40,8 +42,7 @@ game_manager::game_manager() {
 void game_manager::loop_main() {
   /// Main pseudo-loop
   gui.draw();
-  vec2f mouse_pos_rel;
-  // TODO: populate from screen coords
+  mouse_pos_rel += vec2f{ImGui::GetMouseDragDelta()} * 0.00001f * vec2f{-1.0f, 1.0f};
   renderer.draw(mouse_pos_rel);
 }
 
