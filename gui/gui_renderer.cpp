@@ -32,7 +32,7 @@ void gui_renderer::draw() const {
   ImGui_ImplEmscripten_NewFrame();
   ImGui::NewFrame();
 
-  ImGui::ShowDemoWindow();
+  //ImGui::ShowDemoWindow();
 
   ImGui::Render();                                                              // finalise draw data (actual rendering of draw data is done by the renderer later)
 }
