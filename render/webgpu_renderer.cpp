@@ -48,6 +48,8 @@ webgpu_renderer::webgpu_renderer(logstorm::manager &this_logger)
   /// Construct a WebGPU renderer and populate those members that don't require delayed init
   if(!webgpu.instance) throw std::runtime_error{"Could not initialize WebGPU"};
 
+  shader_code = render::shaders::default_wgsl;
+
   // find out about the initial canvas size and the current window and doc sizes
   window.viewport_size.assign(emscripten::val::global("window")["innerWidth"].as<unsigned int>(),
                               emscripten::val::global("window")["innerHeight"].as<unsigned int>());
@@ -504,108 +506,7 @@ void webgpu_renderer::configure() {
   logger << "WebGPU acquiring queue";
   webgpu.queue = webgpu.device.GetQueue();
 
-  logger << "WebGPU assembling shaders";
-  {
-    wgpu::ShaderModuleWGSLDescriptor shader_module_wgsl_decriptor;
-    shader_module_wgsl_decriptor.code = render::shaders::default_wgsl;
-    wgpu::ShaderModuleDescriptor shader_module_descriptor{
-      .nextInChain{&shader_module_wgsl_decriptor},
-      .label{"Shader module 1"},
-    };
-    wgpu::ShaderModule shader_module{webgpu.device.CreateShaderModule(&shader_module_descriptor)};
-
-    logger << "WebGPU configuring pipeline";
-
-    std::array vertex_attributes{
-      wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x2},
-        .offset{offsetof(vertex, position)},
-        .shaderLocation{0},
-      },
-      wgpu::VertexAttribute{
-        .format{wgpu::VertexFormat::Float32x2},
-        .offset{offsetof(vertex, uv)},
-        .shaderLocation{1},
-      },
-    };
-    std::vector<wgpu::VertexBufferLayout> vertex_buffer_layouts{
-      {
-        .arrayStride{sizeof(vertex)},
-        .attributeCount{vertex_attributes.size()},
-        .attributes{vertex_attributes.data()},
-      },
-    };
-
-    wgpu::BlendState blend_state{
-      .color{                                                                   // BlendComponent
-        .operation{wgpu::BlendOperation::Add},                                  // initial values from https://eliemichel.github.io/LearnWebGPU/basic-3d-rendering/hello-triangle.html
-        .srcFactor{wgpu::BlendFactor::SrcAlpha},
-        .dstFactor{wgpu::BlendFactor::OneMinusSrcAlpha},
-      },
-      .alpha{                                                                   // BlendComponent
-        .operation{wgpu::BlendOperation::Add},                                  // these differ from defaults
-        .srcFactor{wgpu::BlendFactor::Zero},
-        .dstFactor{wgpu::BlendFactor::One},
-        // TODO: compare with defaults
-      },
-    };
-    wgpu::ColorTargetState colour_target_state{
-      .format{webgpu.surface_preferred_format},
-      .blend{&blend_state},
-    };
-    wgpu::FragmentState fragment_state{
-      .module{shader_module},
-      .entryPoint{"fs_main"},
-      .constantCount{0},
-      .constants{nullptr},
-      .targetCount{1},
-      .targets{&colour_target_state},
-    };
-
-    wgpu::BindGroupLayoutEntry binding_layout{
-      .binding{0},                                                              // binding index as used in the @binding attribute in the shader
-      .visibility{wgpu::ShaderStage::Vertex},
-      .buffer{                                                                  // BufferBindingLayout
-        .type{wgpu::BufferBindingType::Uniform},
-        .minBindingSize{sizeof(uniforms)},
-      },
-      .sampler{},                                                               // SamplerBindingLayout
-      .texture{},                                                               // TextureBindingLayout
-      .storageTexture{},                                                        // StorageTextureBindingLayout
-    };
-    wgpu::BindGroupLayoutDescriptor bind_group_layout_descriptor{
-      .label{"Bind group layout 1"},
-      .entryCount{1},
-      .entries{&binding_layout},
-    };
-    webgpu.bind_group_layout = webgpu.device.CreateBindGroupLayout(&bind_group_layout_descriptor);
-
-    wgpu::PipelineLayoutDescriptor pipeline_layout_descriptor{
-      .label{"Pipeline layout 1"},
-      .bindGroupLayoutCount{1},
-      .bindGroupLayouts{&webgpu.bind_group_layout},
-    };
-    wgpu::PipelineLayout pipeline_layout{webgpu.device.CreatePipelineLayout(&pipeline_layout_descriptor)};
-
-    wgpu::RenderPipelineDescriptor render_pipeline_descriptor{
-      .label{"Render pipeline 1"},
-      .layout{std::move(pipeline_layout)},
-      .vertex{                                                                  // VertexState
-        .module{shader_module},
-        .entryPoint{"vs_main"},
-        .constantCount{0},
-        .constants{nullptr},
-        .bufferCount{vertex_buffer_layouts.size()},
-        .buffers{vertex_buffer_layouts.data()},
-      },
-      .primitive{                                                               // PrimitiveState
-        .cullMode{wgpu::CullMode::Back},
-      },
-      .multisample{},
-      .fragment{&fragment_state},
-    };
-    webgpu.pipeline = webgpu.device.CreateRenderPipeline(&render_pipeline_descriptor);
-  }
+  configure_pipeline();
 
   emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false,   // target, userdata, use_capture, callback
     ([](int /*event_type*/, EmscriptenUiEvent const *event, void *data) {       // event_type == EMSCRIPTEN_EVENT_RESIZE
@@ -619,6 +520,110 @@ void webgpu_renderer::configure() {
   );
 
   build_scene();
+}
+
+void webgpu_renderer::configure_pipeline() {
+  /// Configure or reconfigure the rendering pipeline
+  logger << "WebGPU assembling shaders";
+  wgpu::ShaderModuleWGSLDescriptor shader_module_wgsl_decriptor;
+  shader_module_wgsl_decriptor.code = shader_code.c_str();
+  wgpu::ShaderModuleDescriptor shader_module_descriptor{
+    .nextInChain{&shader_module_wgsl_decriptor},
+    .label{"Shader module 1"},
+  };
+  wgpu::ShaderModule shader_module{webgpu.device.CreateShaderModule(&shader_module_descriptor)};
+
+  logger << "WebGPU configuring pipeline";
+
+  std::array vertex_attributes{
+    wgpu::VertexAttribute{
+      .format{wgpu::VertexFormat::Float32x2},
+      .offset{offsetof(vertex, position)},
+      .shaderLocation{0},
+    },
+    wgpu::VertexAttribute{
+      .format{wgpu::VertexFormat::Float32x2},
+      .offset{offsetof(vertex, uv)},
+      .shaderLocation{1},
+    },
+  };
+  std::vector<wgpu::VertexBufferLayout> vertex_buffer_layouts{
+    {
+      .arrayStride{sizeof(vertex)},
+      .attributeCount{vertex_attributes.size()},
+      .attributes{vertex_attributes.data()},
+    },
+  };
+
+  wgpu::BlendState blend_state{
+    .color{                                                                     // BlendComponent
+      .operation{wgpu::BlendOperation::Add},                                    // initial values from https://eliemichel.github.io/LearnWebGPU/basic-3d-rendering/hello-triangle.html
+      .srcFactor{wgpu::BlendFactor::SrcAlpha},
+      .dstFactor{wgpu::BlendFactor::OneMinusSrcAlpha},
+    },
+    .alpha{                                                                     // BlendComponent
+      .operation{wgpu::BlendOperation::Add},                                    // these differ from defaults
+      .srcFactor{wgpu::BlendFactor::Zero},
+      .dstFactor{wgpu::BlendFactor::One},
+      // TODO: compare with defaults
+    },
+  };
+  wgpu::ColorTargetState colour_target_state{
+    .format{webgpu.surface_preferred_format},
+    .blend{&blend_state},
+  };
+  wgpu::FragmentState fragment_state{
+    .module{shader_module},
+    .entryPoint{"fs_main"},
+    .constantCount{0},
+    .constants{nullptr},
+    .targetCount{1},
+    .targets{&colour_target_state},
+  };
+
+  wgpu::BindGroupLayoutEntry binding_layout{
+    .binding{0},                                                                // binding index as used in the @binding attribute in the shader
+    .visibility{wgpu::ShaderStage::Vertex},
+    .buffer{                                                                    // BufferBindingLayout
+      .type{wgpu::BufferBindingType::Uniform},
+      .minBindingSize{sizeof(uniforms)},
+    },
+    .sampler{},                                                                 // SamplerBindingLayout
+    .texture{},                                                                 // TextureBindingLayout
+    .storageTexture{},                                                          // StorageTextureBindingLayout
+  };
+  wgpu::BindGroupLayoutDescriptor bind_group_layout_descriptor{
+    .label{"Bind group layout 1"},
+    .entryCount{1},
+    .entries{&binding_layout},
+  };
+  webgpu.bind_group_layout = webgpu.device.CreateBindGroupLayout(&bind_group_layout_descriptor);
+
+  wgpu::PipelineLayoutDescriptor pipeline_layout_descriptor{
+    .label{"Pipeline layout 1"},
+    .bindGroupLayoutCount{1},
+    .bindGroupLayouts{&webgpu.bind_group_layout},
+  };
+  wgpu::PipelineLayout pipeline_layout{webgpu.device.CreatePipelineLayout(&pipeline_layout_descriptor)};
+
+  wgpu::RenderPipelineDescriptor render_pipeline_descriptor{
+    .label{"Render pipeline 1"},
+    .layout{std::move(pipeline_layout)},
+    .vertex{                                                                    // VertexState
+      .module{shader_module},
+      .entryPoint{"vs_main"},
+      .constantCount{0},
+      .constants{nullptr},
+      .bufferCount{vertex_buffer_layouts.size()},
+      .buffers{vertex_buffer_layouts.data()},
+    },
+    .primitive{                                                                 // PrimitiveState
+      .cullMode{wgpu::CullMode::Back},
+    },
+    .multisample{},
+    .fragment{&fragment_state},
+  };
+  webgpu.pipeline = webgpu.device.CreateRenderPipeline(&render_pipeline_descriptor);
 }
 
 void webgpu_renderer::build_scene() {
@@ -654,41 +659,7 @@ void webgpu_renderer::build_scene() {
     uniform_buffer = webgpu.device.CreateBuffer(&uniform_buffer_desecriptor);
   }
 
-  // uniform bind group
-  wgpu::BindGroupEntry bind_group_entry{
-    .binding{0},
-    .buffer{uniform_buffer},
-    .size{sizeof(uniforms)},
-  };
-  wgpu::BindGroupDescriptor bind_group_descriptor{
-    .label{"Bind group 1"},
-    .layout{webgpu.bind_group_layout},
-    .entryCount{1},                                                             // must correspond to layout
-    .entries{&bind_group_entry},
-  };
-  wgpu::BindGroup bind_group{webgpu.device.CreateBindGroup(&bind_group_descriptor)};
-
-  // set up render bundle
-  {
-    wgpu::RenderBundleEncoderDescriptor render_bundle_encoder_descriptor{
-      .label{"Render bundle encoder 1"},
-      .colorFormatCount{1},
-      .colorFormats{&webgpu.surface_preferred_format},
-    };
-    wgpu::RenderBundleEncoder render_bundle_encoder{webgpu.device.CreateRenderBundleEncoder(&render_bundle_encoder_descriptor)};
-
-    render_bundle_encoder.SetPipeline(webgpu.pipeline);                         // select which render pipeline to use
-    render_bundle_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
-    render_bundle_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
-    render_bundle_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
-
-    render_bundle_encoder.DrawIndexed(index_data.size() * decltype(index_data)::value_type::size()); // indexCount, instanceCount = 1, firstIndex = 0, baseVertex = 0, firstInstance = 0
-
-    wgpu::RenderBundleDescriptor render_bundle_descriptor{
-      .label{"Render bundle 1"},
-    };
-    render_bundles.emplace_back(render_bundle_encoder.Finish(&render_bundle_descriptor));
-  }
+  configure_render_bundle();
 
   // populate buffer contents
   webgpu.queue.WriteBuffer(
@@ -704,6 +675,43 @@ void webgpu_renderer::build_scene() {
     index_data.data(),                                                          // data
     index_data.size() * sizeof(index_data[0])                                   // size
   );
+}
+
+void webgpu_renderer::configure_render_bundle() {
+  /// Set up render bundle
+  // uniform bind group
+  wgpu::BindGroupEntry bind_group_entry{
+    .binding{0},
+    .buffer{uniform_buffer},
+    .size{sizeof(uniforms)},
+  };
+  wgpu::BindGroupDescriptor bind_group_descriptor{
+    .label{"Bind group 1"},
+    .layout{webgpu.bind_group_layout},
+    .entryCount{1},                                                             // must correspond to layout
+    .entries{&bind_group_entry},
+  };
+  wgpu::BindGroup bind_group{webgpu.device.CreateBindGroup(&bind_group_descriptor)};
+
+  // render bundle encoder
+  wgpu::RenderBundleEncoderDescriptor render_bundle_encoder_descriptor{
+    .label{"Render bundle encoder 1"},
+    .colorFormatCount{1},
+    .colorFormats{&webgpu.surface_preferred_format},
+  };
+  wgpu::RenderBundleEncoder render_bundle_encoder{webgpu.device.CreateRenderBundleEncoder(&render_bundle_encoder_descriptor)};
+
+  render_bundle_encoder.SetPipeline(webgpu.pipeline);                         // select which render pipeline to use
+  render_bundle_encoder.SetVertexBuffer(0, vertex_buffer, 0, vertex_buffer.GetSize()); // slot, buffer, offset, size
+  render_bundle_encoder.SetIndexBuffer(index_buffer, wgpu::IndexFormat::Uint16, 0, index_buffer.GetSize()); // buffer, format, offset, size
+  render_bundle_encoder.SetBindGroup(0, bind_group);                          // groupIndex, group, dynamicOffsetCount = 0, dynamicOffsets = nullptr
+
+  render_bundle_encoder.DrawIndexed(index_data.size() * decltype(index_data)::value_type::size()); // indexCount, instanceCount = 1, firstIndex = 0, baseVertex = 0, firstInstance = 0
+
+  wgpu::RenderBundleDescriptor render_bundle_descriptor{
+    .label{"Render bundle 1"},
+  };
+  render_bundles.emplace_back(render_bundle_encoder.Finish(&render_bundle_descriptor));
 }
 
 void webgpu_renderer::draw(vec2f const& input) {
@@ -763,6 +771,16 @@ void webgpu_renderer::draw(vec2f const& input) {
 
     webgpu.queue.Submit(1, &command_buffer);
   }
+}
+
+std::string webgpu_renderer::get_shader() const {
+  return shader_code;
+}
+
+void webgpu_renderer::update_shader(std::string const &new_shader_code) {
+  shader_code = new_shader_code;
+  configure_pipeline();
+  configure_render_bundle();
 }
 
 }

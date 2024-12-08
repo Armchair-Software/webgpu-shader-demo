@@ -15,6 +15,8 @@ namespace render {
 class webgpu_renderer {
   logstorm::manager &logger;
 
+  std::string shader_code;
+
 public:
   struct webgpu_data {
     wgpu::Instance instance{wgpu::CreateInstance()};                            // the underlying WebGPU instance
@@ -78,13 +80,18 @@ private:
 
   void wait_to_configure_loop();
   void configure();
-
+  void configure_pipeline();
   void update_imgui_size();
 
   void build_scene();
 
+  void configure_render_bundle();
+
 public:
   void draw(vec2f const& rotation);
+
+  std::string get_shader() const;
+  void update_shader(std::string const &new_shader_code);
 };
 
 }
