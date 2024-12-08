@@ -1,15 +1,16 @@
-# WebGPU Emscripten demo 3 for the Armchair Engine
+# WebGPU Emscripten shader demo for the Armchair Engine
 
-This is part two of a simple proof of concept, a minimal 3D engine written in C++, compiled to WASM with Emscripten.  Running in the browser, rendering with WebGPU.
+A simple WGSL shader test program running a fullscreen quad, written in C++, compiled to WASM with Emscripten.  Running in the browser, rendering with WebGPU.
 
 For the previous demos, see:
 - https://github.com/Armchair-Software/webgpu-demo
 - https://github.com/Armchair-Software/webgpu-demo2
+- https://github.com/Armchair-Software/boids-webgpu-demo
 
-Differences: TODO
+Details: TODO
 
 ## Live demo
-Live demo: https://armchair-software.github.io/webgpu-demo3/
+Live demo: https://armchair-software.github.io/webgpu-shader-demo/
 
 This requires Firefox Nightly, or a recent version of Chrome or Chromium, with webgpu and Vulkan support explicitly enabled.
 
