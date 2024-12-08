@@ -31,6 +31,7 @@ game_manager::game_manager() {
       imgui_wgpu_info.RenderTargetFormat = static_cast<WGPUTextureFormat>(webgpu.surface_preferred_format);
 
       gui.init(imgui_wgpu_info);
+      gui.shader_code = renderer.get_shader();
     },
     [&]{
       loop_main();
@@ -42,6 +43,12 @@ game_manager::game_manager() {
 void game_manager::loop_main() {
   /// Main pseudo-loop
   gui.draw();
+
+  if(gui.shader_code_updated) {
+    renderer.update_shader(gui.shader_code);
+    gui.shader_code_updated = false;
+  }
+
   mouse_pos_rel += vec2f{ImGui::GetMouseDragDelta()} * 0.00001f * vec2f{-1.0f, 1.0f};
   renderer.draw(mouse_pos_rel);
 }
