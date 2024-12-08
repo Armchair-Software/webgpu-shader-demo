@@ -27,7 +27,6 @@ game_manager::game_manager() {
       ImGui_ImplWGPU_InitInfo imgui_wgpu_info;
       imgui_wgpu_info.Device = webgpu.device.Get();
       imgui_wgpu_info.RenderTargetFormat = static_cast<WGPUTextureFormat>(webgpu.surface_preferred_format);
-      imgui_wgpu_info.DepthStencilFormat = static_cast<WGPUTextureFormat>(webgpu.depth_texture_format);
 
       gui.init(imgui_wgpu_info);
     },

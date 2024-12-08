@@ -458,37 +458,6 @@ void webgpu_renderer::init_swapchain() {
   webgpu.swapchain = webgpu.device.CreateSwapChain(webgpu.surface, &swapchain_descriptor);
 }
 
-void webgpu_renderer::init_depth_texture() {
-  /// Create or recreate the depth buffer and its texture view
-  {
-    wgpu::TextureDescriptor depth_texture_descriptor{
-      .label{"Depth texture 1"},
-      .usage{wgpu::TextureUsage::RenderAttachment},
-      .dimension{wgpu::TextureDimension::e2D},
-      .size{
-        window.viewport_size.x,
-        window.viewport_size.y,
-        1
-      },
-      .format{webgpu.depth_texture_format},
-      .viewFormatCount{1},
-      .viewFormats{&webgpu.depth_texture_format},
-    };
-    webgpu.depth_texture = webgpu.device.CreateTexture(&depth_texture_descriptor);
-  }
-  {
-    wgpu::TextureViewDescriptor depth_texture_view_descriptor{
-      .label{"Depth texture view 1"},
-      .format{webgpu.depth_texture_format},
-      .dimension{wgpu::TextureViewDimension::e2D},
-      .mipLevelCount{1},
-      .arrayLayerCount{1},
-      .aspect{wgpu::TextureAspect::DepthOnly},
-    };
-    webgpu.depth_texture_view = webgpu.depth_texture.CreateView(&depth_texture_view_descriptor);
-  }
-}
-
 void webgpu_renderer::wait_to_configure_loop() {
   /// Check if initialisation has completed and the WebGPU system is ready for configuration
   /// Since init occurs asynchronously, some emscripten ticks are needed before this becomes true
@@ -593,17 +562,6 @@ void webgpu_renderer::configure() {
       .targets{&colour_target_state},
     };
 
-    wgpu::DepthStencilState depth_stencil_state{
-      .format{wgpu::TextureFormat::Depth24Plus},
-      .depthWriteEnabled{true},
-      .depthCompare{wgpu::CompareFunction::Less},
-      .stencilFront{},                                                          // StencilFaceState
-      .stencilBack{},                                                           // StencilFaceState
-      .stencilReadMask{0},
-      .stencilWriteMask{0},
-      // TODO: tweak depth bias settings
-    };
-
     wgpu::BindGroupLayoutEntry binding_layout{
       .binding{0},                                                              // binding index as used in the @binding attribute in the shader
       .visibility{wgpu::ShaderStage::Vertex},
@@ -643,15 +601,11 @@ void webgpu_renderer::configure() {
       .primitive{                                                               // PrimitiveState
         .cullMode{wgpu::CullMode::Back},
       },
-      .depthStencil{&depth_stencil_state},
       .multisample{},
       .fragment{&fragment_state},
     };
     webgpu.pipeline = webgpu.device.CreateRenderPipeline(&render_pipeline_descriptor);
   }
-
-  logger << "WebGPU creating depth texture";
-  init_depth_texture();
 
   emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false,   // target, userdata, use_capture, callback
     ([](int /*event_type*/, EmscriptenUiEvent const *event, void *data) {       // event_type == EMSCRIPTEN_EVENT_RESIZE
@@ -660,7 +614,6 @@ void webgpu_renderer::configure() {
       renderer.window.viewport_size.y = static_cast<unsigned int>(event->windowInnerHeight);
 
       renderer.init_swapchain();
-      renderer.init_depth_texture();
       return true;                                                              // the event was consumed
     })
   );
@@ -721,7 +674,6 @@ void webgpu_renderer::build_scene() {
       .label{"Render bundle encoder 1"},
       .colorFormatCount{1},
       .colorFormats{&webgpu.surface_preferred_format},
-      .depthStencilFormat{webgpu.depth_texture_format},
     };
     wgpu::RenderBundleEncoder render_bundle_encoder{webgpu.device.CreateRenderBundleEncoder(&render_bundle_encoder_descriptor)};
 
@@ -786,17 +738,10 @@ void webgpu_renderer::draw(vec2f const& input) {
         .clearValue{wgpu::Color{0, 0.5, 0.5, 1.0}},
       };
 
-      wgpu::RenderPassDepthStencilAttachment render_pass_depth_stencil_attachment{
-        .view{webgpu.depth_texture_view},
-        .depthLoadOp{wgpu::LoadOp::Clear},
-        .depthStoreOp{wgpu::StoreOp::Store},
-        .depthClearValue{1.0f},
-      };
       render_pass_descriptor = {
         .label{"Render pass 1"},
         .colorAttachmentCount{1},
         .colorAttachments{&render_pass_colour_attachment},
-        .depthStencilAttachment{&render_pass_depth_stencil_attachment},
       };
 
       wgpu::RenderPassEncoder render_pass_encoder{command_encoder.BeginRenderPass(&render_pass_descriptor)};

@@ -27,12 +27,7 @@ public:
 
     wgpu::SwapChain swapchain;                                                  // the swapchain providing a texture view to render to
 
-    wgpu::Texture depth_texture;                                                // depth buffer
-    wgpu::TextureView depth_texture_view;
-    // TODO: rip out depth texture
-
     wgpu::TextureFormat surface_preferred_format{wgpu::TextureFormat::Undefined}; // preferred texture format for this surface
-    static constexpr wgpu::TextureFormat depth_texture_format{wgpu::TextureFormat::Depth24Plus}; // what format to use for the depth texture
 
   private:
     webgpu_data() = default;
