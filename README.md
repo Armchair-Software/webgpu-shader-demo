@@ -2,10 +2,11 @@
 
 A simple WGSL shader test program running a fullscreen quad, written in C++, compiled to WASM with Emscripten.  Running in the browser, rendering with WebGPU.
 
-For the previous demos, see:
+For the other demos, see:
 - https://github.com/Armchair-Software/webgpu-demo
 - https://github.com/Armchair-Software/webgpu-demo2
 - https://github.com/Armchair-Software/boids-webgpu-demo
+- https://github.com/Armchair-Software/chatgpt-emscripten-demo
 
 This demo just renders a simple full-screen quad, useful for testing shaders.  There is a minimal integrated editor for the shader code.
 
@@ -21,6 +22,7 @@ This requires Firefox Nightly, or a recent version of Chrome or Chromium, with w
 - CMake
 - [VectorStorm](https://github.com/Armchair-Software/vectorstorm) (included)
 - [LogStorm](https://github.com/VoxelStorm-Ltd/logstorm) (included)
+- [Emscripten Browser Clipboard](https://github.com/Armchair-Software/emscripten-browser-clipboard) (included)
 - [magic_enum](https://github.com/Neargye/magic_enum) (included)
 - [dear imgui](https://github.com/ocornut/imgui) with the proposed `imgui_impl_emscripten` backend (included)
 
