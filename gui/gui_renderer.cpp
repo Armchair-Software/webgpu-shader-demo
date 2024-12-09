@@ -25,6 +25,8 @@ void gui_renderer::init(ImGui_ImplWGPU_InitInfo &imgui_wgpu_info) {
   /// Any additional initialisation that needs to occur after WebGPU has been initialised
   ImGui_ImplWGPU_Init(&imgui_wgpu_info);
   ImGui_ImplEmscripten_Init();
+
+  clipboard.set_imgui_callbacks();
 }
 
 void gui_renderer::draw() {
