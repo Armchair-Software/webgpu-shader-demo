@@ -1,3 +1,5 @@
+[![CI Build](https://github.com/Armchair-Software/webgpu-shader-demo/actions/workflows/ci-build.yml/badge.svg)](https://github.com/Armchair-Software/webgpu-shader-demo/actions)
+
 # WebGPU Emscripten shader demo for the Armchair Engine
 
 A simple WGSL shader test program running a fullscreen quad, written in C++, compiled to WASM with Emscripten.  Running in the browser, rendering with WebGPU.
