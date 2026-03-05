@@ -40,10 +40,10 @@
     "path-to-regexp": "^0.1.12"
   },
   "overrides": {
-    "tar": "^7.5.10",
-    "@tootallnate/once": "^3.0.1",
-    "http-proxy-agent": "^7.0.2",
-    "@inquirer/editor": "^5.0.8",
-    "webpack-dev-server": "^5.2.3"
+    "tar": "7.5.10",
+    "@tootallnate/once": "3.0.1",
+    "http-proxy-agent": "7.0.2",
+    "@inquirer/editor": "5.0.8",
+    "webpack-dev-server": "5.2.3"
   }
 }
