@@ -9,10 +9,10 @@ namespace secure_cleanse_impl {
 // Pointer to memset is volatile so that compiler must de-reference
 // the pointer and can't assume that it points to any function in
 // particular (such as memset, which it then might further "optimize")
-typedef void* (*memset_t)(void*, int, size_t);
+using memset_t = void *(*)(void *, int, size_t);
 static volatile memset_t memset_func{memset};
 
-}
+} // namespace secure_cleanse_impl
 
 inline void secure_cleanse(void *ptr, size_t len);
 inline void secure_cleanse(std::span<std::byte> target);
