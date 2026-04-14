@@ -94,7 +94,7 @@ jobs:
     - name: Setup Node toolchain
       uses: actions/setup-node@v6
       with:
-        node-version: 20
+        node-version: 22
     - name: Download artifacts from build-rel
       uses: actions/download-artifact@v8
       with:
@@ -119,7 +119,7 @@ jobs:
     - name: Setup Node toolchain
       uses: actions/setup-node@v6
       with:
-        node-version: 20
+        node-version: 22
     - name: Download artifacts from build-rel
       uses: actions/download-artifact@v8
       with:
@@ -145,7 +145,7 @@ jobs:
     - name: Setup Node toolchain
       uses: actions/setup-node@v6
       with:
-        node-version: 20
+        node-version: 22
     - name: Download artifacts from build-rel
       uses: actions/download-artifact@v8
       with:
