@@ -67,12 +67,12 @@ jobs:
         cp build_rel/client.* deploy/
         mv deploy/client.html deploy/index.html
     - name: Upload files for later stages
-      uses: actions/upload-artifact@v7.0.0
+      uses: actions/upload-artifact@v7.0.1
       with:
         name: build-rel-artifacts
         path: ./deploy
     - name: Upload files to GitHub Pages
-      uses: actions/upload-pages-artifact@v4
+      uses: actions/upload-pages-artifact@v5
       with:
         path: ./deploy
 
