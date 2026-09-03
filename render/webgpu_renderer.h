@@ -1,5 +1,8 @@
 #pragma once
 
+#include <functional>
+#include <string>
+#include <vector>
 #include <emscripten/em_types.h>
 #include <webgpu/webgpu_cpp.h>
 #include "logstorm/logstorm_forward.h"
@@ -26,8 +29,6 @@ public:
     wgpu::Queue queue;                                                          // the queue for this device, once it has been acquired
     wgpu::BindGroupLayout bind_group_layout;                                    // layout for the uniform bind group
     wgpu::RenderPipeline pipeline;                                              // the render pipeline currently in use
-
-    wgpu::SwapChain swapchain;                                                  // the swapchain providing a texture view to render to
 
     wgpu::TextureFormat surface_preferred_format{wgpu::TextureFormat::Undefined}; // preferred texture format for this surface
 
@@ -75,7 +76,7 @@ public:
   void init(std::function<void(webgpu_data const&)> &&postinit_callback, std::function<void()> &&main_loop_callback);
 
 private:
-  void init_swapchain();
+  void configure_surface();
   void init_depth_texture();
 
   void wait_to_configure_loop();
