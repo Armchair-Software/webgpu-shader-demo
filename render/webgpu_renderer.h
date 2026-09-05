@@ -63,9 +63,9 @@ private:
   webgpu_data webgpu;
 
   struct window_data {
-    vec2ui css_viewport_size;                                                   // browser window viewport size in CSS pixels
+    vec2d css_viewport_size;                                                    // canvas viewport size in CSS pixels
     vec2ui viewport_size;                                                       // our idea of the size of the viewport we render to, in real pixels
-    float device_pixel_ratio{1.0f};
+    double device_pixel_ratio{1.0};
   } window;
 
   std::function<void(webgpu_data const&)> postinit_callback;                    // the callback that is called once when init completes (it cannot return normally because of emscripten's loop mechanism)
@@ -77,6 +77,7 @@ public:
   void init(std::function<void(webgpu_data const&)> &&postinit_callback, std::function<void()> &&main_loop_callback);
 
 private:
+  bool update_viewport_size();
   void configure_surface();
   void init_depth_texture();
 

@@ -8,7 +8,6 @@
 #include <vector>
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <emscripten/val.h>
 #include <imgui/imgui_impl_wgpu.h>
 #include <magic_enum/magic_enum.hpp>
 #include "sqrt_constexpr.h"
@@ -67,20 +66,56 @@ webgpu_renderer::webgpu_renderer(logstorm::manager &this_logger)
 
   shader_code = render::shaders::default_wgsl;
 
+  auto const resize_callback{+[](void *data) {
+    auto &renderer{*static_cast<webgpu_renderer*>(data)};
+    if(!renderer.update_viewport_size() || !renderer.webgpu.queue) return;
+    renderer.configure_surface();
+  }};
+  EM_ASM({
+    const canvas = Module["canvas"];
+    if(!canvas.__webgpu_device_pixel_resize_observer) {
+      const resize_callback = wasmTable.get($0);
+      const set_canvas_size = (width, height) => {
+        width = Math.max(1, Math.round(width));
+        height = Math.max(1, Math.round(height));
+        if(canvas.width !== width) canvas.width = width;
+        if(canvas.height !== height) canvas.height = height;
+      };
+      const set_approximate_canvas_size = () => {
+        const rect = canvas.getBoundingClientRect();
+        set_canvas_size(rect.width * window.devicePixelRatio, rect.height * window.devicePixelRatio);
+      };
+      set_approximate_canvas_size();
+      if(typeof ResizeObserver !== "undefined") {
+        const has_device_pixel_content_box = typeof ResizeObserverEntry !== "undefined" && "devicePixelContentBoxSize" in ResizeObserverEntry.prototype;
+        const observer = new ResizeObserver((entries) => {
+          const entry = entries[0];
+          const device_sizes = has_device_pixel_content_box ? entry.devicePixelContentBoxSize : null;
+          const device_size = device_sizes && device_sizes.length ? device_sizes[0] : device_sizes;
+          if(device_size) set_canvas_size(device_size.inlineSize, device_size.blockSize);
+          else set_approximate_canvas_size();
+          resize_callback($1);
+        });
+        observer.observe(canvas, {box: has_device_pixel_content_box ? "device-pixel-content-box" : "content-box"});
+        canvas.__webgpu_device_pixel_resize_observer = observer;
+        if(!has_device_pixel_content_box) console.warn("ResizeObserver device-pixel-content-box is unavailable; canvas sizing will approximate using devicePixelRatio.");
+      } else {
+        console.warn("ResizeObserver is unavailable; canvas sizing will approximate using devicePixelRatio.");
+        window.addEventListener("resize", () => {
+          set_approximate_canvas_size();
+          resize_callback($1);
+        });
+        canvas.__webgpu_device_pixel_resize_observer = true;
+      }
+    }
+  }, resize_callback, this);
+
   // Find the initial framebuffer size. Browser dimensions are CSS pixels, while
   // WebGPU surfaces are sized in device pixels.
-  window.css_viewport_size.assign(
-    emscripten::val::global("window")["innerWidth"].as<unsigned int>(),
-    emscripten::val::global("window")["innerHeight"].as<unsigned int>()
-  );
-  window.device_pixel_ratio = emscripten::val::global("window")["devicePixelRatio"].as<float>(); // query device pixel ratio using JS
-  window.viewport_size.assign(
-    static_cast<unsigned int>(std::round(static_cast<float>(window.css_viewport_size.x) * window.device_pixel_ratio)),
-    static_cast<unsigned int>(std::round(static_cast<float>(window.css_viewport_size.y) * window.device_pixel_ratio))
-  );
-  logger << "WebGPU: Viewport size: " << window.css_viewport_size << " (device pixels: approx " << static_cast<vec2f>(window.css_viewport_size) * window.device_pixel_ratio << ")";
+  update_viewport_size();
+  logger << "WebGPU: Viewport size: " << window.css_viewport_size << " (nominal device pixels: approx " << window.css_viewport_size * window.device_pixel_ratio << ", framebuffer " << window.viewport_size << ")";
   logger << "WebGPU: CSS viewport size: " << window.css_viewport_size << " CSS pixels (framebuffer: " << window.viewport_size << " device pixels)";
-  logger << "WebGPU: Device pixel ratio: " << window.device_pixel_ratio << " device pixels per CSS pixel (" << static_cast<unsigned int>(std::round(100.0f * window.device_pixel_ratio)) << "% scale)";
+  logger << "WebGPU: Device pixel ratio: " << window.device_pixel_ratio << " device pixels per CSS pixel (" << static_cast<unsigned int>(std::round(100.0 * window.device_pixel_ratio)) << "% scale)";
 
   // create a surface
   {
@@ -368,13 +403,31 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
   std::unreachable();
 }
 
+bool webgpu_renderer::update_viewport_size() {
+  /// Refresh the CSS viewport and device-pixel framebuffer sizes, and return whether the viewport size has changed
+  int framebuffer_width{0};
+  int framebuffer_height{0};
+  if(emscripten_get_canvas_element_size("#canvas", &framebuffer_width, &framebuffer_height) != EMSCRIPTEN_RESULT_SUCCESS) {
+    throw std::runtime_error{"Could not read canvas framebuffer size"};
+  }
+  vec2ui const new_viewport_size{static_cast<unsigned int>(framebuffer_width), static_cast<unsigned int>(framebuffer_height)};
+  if(new_viewport_size.x == 0 || new_viewport_size.y == 0) return false;
+
+  double css_width{0.0};
+  double css_height{0.0};
+  if(emscripten_get_element_css_size("#canvas", &css_width, &css_height) != EMSCRIPTEN_RESULT_SUCCESS) {
+    throw std::runtime_error{"Could not read canvas CSS size"};
+  }
+
+  bool const viewport_size_changed{new_viewport_size != window.viewport_size};
+  window.css_viewport_size.assign(css_width, css_height);
+  window.device_pixel_ratio = emscripten_get_device_pixel_ratio();
+  window.viewport_size = new_viewport_size;
+  return viewport_size_changed;
+}
+
 void webgpu_renderer::configure_surface() {
   /// Create or recreate the configured surface for the current viewport size
-  emscripten_set_canvas_element_size(
-    "#canvas",
-    static_cast<int>(window.viewport_size.x),
-    static_cast<int>(window.viewport_size.y)
-  );
 
   wgpu::SurfaceConfiguration surface_configuration{
     .device{webgpu.device},
@@ -417,32 +470,13 @@ void webgpu_renderer::wait_to_configure_loop() {
 void webgpu_renderer::configure() {
   /// When the device is ready, configure the WebGPU system
   logger << "WebGPU device ready, configuring surface";
+  update_viewport_size();
   configure_surface();
 
   logger << "WebGPU acquiring queue";
   webgpu.queue = webgpu.device.GetQueue();
 
   configure_pipeline();
-
-  emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, this, false,   // target, userdata, use_capture, callback
-    ([](int /*event_type*/, EmscriptenUiEvent const *event, void *data) {       // event_type == EMSCRIPTEN_EVENT_RESIZE
-      auto &renderer{*static_cast<webgpu_renderer*>(data)};
-      renderer.window.css_viewport_size.assign(
-        static_cast<unsigned int>(event->windowInnerWidth),
-        static_cast<unsigned int>(event->windowInnerHeight)
-      );
-      renderer.window.device_pixel_ratio = static_cast<float>(emscripten_get_device_pixel_ratio());
-      vec2ui const framebuffer_size{
-        static_cast<unsigned int>(std::round(static_cast<float>(renderer.window.css_viewport_size.x) * renderer.window.device_pixel_ratio)),
-        static_cast<unsigned int>(std::round(static_cast<float>(renderer.window.css_viewport_size.y) * renderer.window.device_pixel_ratio))
-      };
-      if(framebuffer_size.x == 0 || framebuffer_size.y == 0 || framebuffer_size == renderer.window.viewport_size) return true;
-
-      renderer.window.viewport_size = framebuffer_size;
-      renderer.configure_surface();
-      return true;                                                              // the event was consumed
-    })
-  );
 
   build_scene();
 }
