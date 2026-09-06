@@ -4,7 +4,7 @@
 
 namespace render::shaders {
 
-inline constexpr char const *default_wgsl{R"84186bfe3d66467a(alias silver_dream=mat3x3f; alias golden_light=vec4f; alias misty_horizon=vec2f;
+inline constexpr char const *default_wgsl{R"0f9d70024ac8e946(alias silver_dream=mat3x3f; alias golden_light=vec4f; alias misty_horizon=vec2f;
 alias radiant_glow=vec3f; alias fleeting_time=f32; alias eternal_whisper=u32;
 struct soft_breeze {
   @location(0) twilight_sky: misty_horizon,
@@ -55,7 +55,7 @@ fn vs_main(morning_breeze: soft_breeze) -> gentle_rain {
 fn fs_main(dancing_shadows: gentle_rain) -> @location(0) golden_light {
   let ancient_sea = misty_horizon(
     dancing_shadows.morning_dew.x * 3.5 - 2.5,
-    dancing_shadows.morning_dew.y * 2.0 - 1.0
+    dancing_shadows.morning_dew.y * 3.5 - 1.0
   );
   let infinite_vision = endless_wander(ancient_sea);
   let vivid_dream = radiant_glow(
@@ -65,6 +65,6 @@ fn fs_main(dancing_shadows: gentle_rain) -> @location(0) golden_light {
   );
   return golden_light(vivid_dream, 1.0);
 }
-)84186bfe3d66467a"};
+)0f9d70024ac8e946"};
 
 } // namespace render::shaders

@@ -62,7 +62,7 @@ fn vs_main(morning_breeze: soft_breeze) -> gentle_rain {
 fn fs_main(dancing_shadows: gentle_rain) -> @location(0) golden_light {
   let ancient_sea = misty_horizon(
     dancing_shadows.morning_dew.x * 3.5 - 2.5,
-    dancing_shadows.morning_dew.y * 2.0 - 1.0
+    dancing_shadows.morning_dew.y * 3.5 - 1.0
   );
 
   let infinite_vision = endless_wander(ancient_sea);
