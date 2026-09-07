@@ -4,18 +4,21 @@
 //
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2026-09-05: Emscripten: Use the canvas framebuffer dimensions for display sizing and exact per-axis mouse coordinate scaling.
-//  2026-09-04: Emscripten: Replaced TargetDevicePixelRatio global with an Init() parameter and runtime setter.
+//  2026-09-06: DPI: Added public ImGui_ImplEmscripten_UpdateDisplayProperties() wrapper.
+//  2026-09-06: Inputs: Exposed mouse button and key translation functions as public.
+//  2026-09-06: DPI: Added ImGui_ImplEmscripten_GetCssToImGuiScale() getter.
+//  2026-09-05: DPI: Use the canvas framebuffer dimensions for display sizing and exact per-axis mouse coordinate scaling.
+//  2026-09-04: Replaced TargetDevicePixelRatio global with an Init() parameter and runtime setter.
 //  2026-09-03: Updated coding style and simplified key translation table setup.
 //  2026-04-02: Inputs: Replaced custom KeyboardEvent.code parser with ImHashStr()/ImGuiStorage lookup to match Dear ImGui backend style.
-//  2026-03-31: Emscripten: Added configurable TargetDevicePixelRatio to control how browser device pixels map to Dear ImGui pixels.
+//  2026-03-31: Added configurable TargetDevicePixelRatio to control how browser device pixels map to Dear ImGui pixels.
 //  2026-03-31: Inputs: Added BrowserBack/Forward and F13-F24 key mappings.
-//  2026-03-31: Emscripten: Moved cursor state into backend userdata and replaced cursor restore storage with owned C strings.
+//  2026-03-31: Moved cursor state into backend userdata and replaced cursor restore storage with owned C strings.
 //  2024-12-09: Inputs: Added special handling for modifier keys to also generate modifier key events.
 //  2024-12-08: Inputs: Prevent "Delete" key from getting printed in text input.
 //  2024-12-06: Inputs: Added special handling for Tab and Enter event capture.
 //  2024-12-06: Inputs: Handle blur and focus events correctly, focusin and focusout aren't enough.
-//  2024-12-06: Emscripten: Don't rely on devicePixelRatio for WebGPU framebuffer sizing; CSS->ImGui scaling may still use it.
+//  2024-12-06: Don't rely on devicePixelRatio for WebGPU framebuffer sizing; CSS->ImGui scaling may still use it.
 //  2024-11-22: Initial version by Eugene Hopkinson. (#8178)
 
 #include "imgui.h"
@@ -26,11 +29,6 @@
 #include <emscripten/html5.h>
 
 extern ImGuiID ImHashStr(char const* data, size_t data_size = 0, ImGuiID seed = 0); // Declared in imgui_internal.h.
-
-// W3C UI Events KeyboardEvent.code translation helpers
-
-static ImGuiKey ImGui_ImplEmscripten_TranslateKey(char const* emscripten_key);
-static constexpr ImGuiMouseButton ImGui_ImplEmscripten_TranslateMouseButton(unsigned short emscripten_button) __attribute__((__const__));
 
 // Browser cursor helpers, adapted from https://github.com/Armchair-Software/emscripten-browser-cursor
 
@@ -402,6 +400,20 @@ void ImGui_ImplEmscripten_SetTargetDevicePixelRatio(float target_device_pixel_ra
     ImGui_ImplEmscripten_UpdateDisplayProperties(ImGui::GetIO(), bd);
 }
 
+ImVec2 ImGui_ImplEmscripten_GetCssToImGuiScale()
+{
+    ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
+    IM_ASSERT(bd != nullptr && "Context or backend not initialized? Did you call ImGui_ImplEmscripten_Init()?");
+    return bd != nullptr ? bd->CssToImGuiScale : ImVec2(1.0f, 1.0f);
+}
+
+void ImGui_ImplEmscripten_UpdateDisplayProperties()
+{
+    ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
+    IM_ASSERT(bd != nullptr && "Context or backend not initialized? Did you call ImGui_ImplEmscripten_Init()?");
+    if (bd != nullptr) ImGui_ImplEmscripten_UpdateDisplayProperties(ImGui::GetIO(), bd);
+}
+
 void ImGui_ImplEmscripten_Shutdown()
 {
     ImGui_ImplEmscripten_Data* bd = ImGui_ImplEmscripten_GetBackendData();
@@ -598,7 +610,7 @@ static void ImGui_ImplEmscripten_SetBrowserCursor(char const* new_cursor)
     }, new_cursor);
 }
 
-static constexpr ImGuiMouseButton ImGui_ImplEmscripten_TranslateMouseButton(unsigned short emscripten_button)
+ImGuiMouseButton ImGui_ImplEmscripten_TranslateMouseButton(unsigned short emscripten_button)
 {
     // Translate an emscripten-provided integer describing a mouse button to an imgui mouse button
     if (emscripten_button == 1) return ImGuiMouseButton_Middle;                 // 1 = middle mouse button
@@ -833,7 +845,7 @@ static ImGuiStorage const& ImGui_ImplEmscripten_GetKeyTranslationStorage()
     return storage;
 }
 
-static ImGuiKey ImGui_ImplEmscripten_TranslateKey(char const* emscripten_key)
+ImGuiKey ImGui_ImplEmscripten_TranslateKey(const char* emscripten_key)
 {
     // Translate a W3C KeyboardEvent.code string into an ImGuiKey.
     if (emscripten_key == nullptr || emscripten_key[0] == '\0') return ImGuiKey_None;
