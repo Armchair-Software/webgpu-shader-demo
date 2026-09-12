@@ -141,9 +141,9 @@ jobs:
     # TODO: cache node
 
   build-electron-darwin:
-    if: false # Stage disabled
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     needs: build-rel
+    timeout-minutes: 30
     steps:
     - uses: actions/checkout@v6
     - name: Setup Node toolchain
@@ -162,6 +162,12 @@ jobs:
       run: |
         cd electron/webgpu-demo3
         npm install
-        npm run make -- --platform darwin
-    # TODO: publish
+        npm run make -- --platform darwin --arch arm64
+    - name: Upload macOS packages
+      uses: actions/upload-artifact@v7.0.1
+      with:
+        name: electron-darwin-arm64
+        path: electron/webgpu-demo3/out/make/
+        if-no-files-found: error
+    # Packages are unsigned and not notarised; intended for CI inspection, not public distribution.
     # TODO: cache node
