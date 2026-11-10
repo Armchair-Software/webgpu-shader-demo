@@ -14,6 +14,8 @@
 #include "instance.h"
 #include "shaders/default.wgsl.h"
 
+//#define DEBUG_WEBGPU
+
 
 namespace render {
 
@@ -32,7 +34,7 @@ std::string enum_wgpu_name(Tc enum_in) {
   }
 
   if(auto enum_out_opt{magic_enum::enum_cast<Tc>(enum_value)}; enum_out_opt.has_value()) { // fall back to trying the C enum interpretation
-   return std::string{magic_enum::enum_name(*enum_out_opt)} + " (C binding only)";
+    return std::string{magic_enum::enum_name(*enum_out_opt)} + " (C binding only)";
   }
 
   std::ostringstream oss;
@@ -111,7 +113,7 @@ webgpu_renderer::webgpu_renderer(logstorm::manager &this_logger)
   }, resize_callback, this);
 
   // Find the initial framebuffer size. Browser dimensions are CSS pixels, while
-  // WebGPU surfaces are sized in device pixels.
+  // WebGPU surfaces and depth textures are sized in device pixels.
   update_viewport_size();
   logger << "WebGPU: Viewport size: " << window.css_viewport_size << " (nominal device pixels: approx " << window.css_viewport_size * window.device_pixel_ratio << ", framebuffer " << window.viewport_size << ")";
   logger << "WebGPU: CSS viewport size: " << window.css_viewport_size << " CSS pixels (framebuffer: " << window.viewport_size << " device pixels)";
@@ -165,7 +167,7 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
         webgpu.surface.GetCapabilities(adapter, &surface_capabilities);
 
         // report surface and adapter capabilities
-        #ifndef NDEBUG
+        #ifdef DEBUG_WEBGPU
           {
             for(size_t i{0}; i != surface_capabilities.formatCount; ++i) {
               logger << "DEBUG: WebGPU surface capabilities: texture formats: " << magic_enum::enum_name(surface_capabilities.formats[i]);
@@ -177,7 +179,7 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
               logger << "DEBUG: WebGPU surface capabilities: alpha modes: " << magic_enum::enum_name(surface_capabilities.alphaModes[i]);
             }
           }
-        #endif // NDEBUG
+        #endif // DEBUG_WEBGPU
 
         if(surface_capabilities.formatCount != 0) {
           webgpu.surface_preferred_format = surface_capabilities.formats[0];
@@ -191,7 +193,7 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
         {
           wgpu::AdapterInfo adapter_info;
           adapter.GetInfo(&adapter_info);
-          #ifndef NDEBUG
+          #ifdef DEBUG_WEBGPU
             logger << "DEBUG: WebGPU adapter info: vendor: " << string_wgpu(adapter_info.vendor);
             logger << "DEBUG: WebGPU adapter info: architecture: " << string_wgpu(adapter_info.architecture);
             logger << "DEBUG: WebGPU adapter info: device: " << string_wgpu(adapter_info.device);
@@ -199,7 +201,7 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
             logger << "DEBUG: WebGPU adapter info: vendorID:deviceID: " << adapter_info.vendorID << ":" << adapter_info.deviceID;
             logger << "DEBUG: WebGPU adapter info: backendType: " << magic_enum::enum_name(adapter_info.backendType);
             logger << "DEBUG: WebGPU adapter info: adapterType: " << magic_enum::enum_name(adapter_info.adapterType);
-          #endif // NDEBUG
+          #endif // DEBUG_WEBGPU
           logger << "WebGPU adapter info: " << string_wgpu(adapter_info.description) << " (" << magic_enum::enum_name(adapter_info.backendType) << ", " << string_wgpu(adapter_info.vendor) << ", " << string_wgpu(adapter_info.architecture) << ")";
         }
         std::set<wgpu::FeatureName> adapter_features;
@@ -207,24 +209,24 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
           // see https://developer.mozilla.org/en-US/docs/Web/API/GPUSupportedFeatures and https://www.w3.org/TR/webgpu/#feature-index
           wgpu::SupportedFeatures adapter_supported_features;
           adapter.GetFeatures(&adapter_supported_features);
-          #ifndef NDEBUG
+          #ifdef DEBUG_WEBGPU
             logger << "DEBUG: WebGPU adapter features count: " << adapter_supported_features.featureCount;
-          #endif // NDEBUG
+          #endif // DEBUG_WEBGPU
           for(size_t i{0}; i != adapter_supported_features.featureCount; ++i) {
             adapter_features.emplace(adapter_supported_features.features[i]);
           }
         }
-        #ifndef NDEBUG
+        #ifdef DEBUG_WEBGPU
           for(auto const feature : adapter_features) {
             logger << "DEBUG: WebGPU adapter features: " << enum_wgpu_name(feature);
           }
-        #endif // NDEBUG
+        #endif // DEBUG_WEBGPU
 
         wgpu::Limits adapter_limits;
-        bool const result{adapter.GetLimits(&adapter_limits)};
-        if(!result) throw std::runtime_error{"WebGPU: Could not query adapter limits"};
-        #ifndef NDEBUG
-          logger << "DEBUG: WebGPU adapter limits result: " << std::boolalpha << result;
+        wgpu::Status const limits_status{adapter.GetLimits(&adapter_limits)};
+        if(limits_status != wgpu::Status::Success) throw std::runtime_error{"WebGPU: Could not query adapter limits"};
+        #ifdef DEBUG_WEBGPU
+          logger << "DEBUG: WebGPU adapter limits status: " << enum_wgpu_name(limits_status);
           logger << "DEBUG: WebGPU adapter limits nextInChain: " << adapter_limits.nextInChain;
           logger << "DEBUG: WebGPU adapter limits maxTextureDimension1D: " << adapter_limits.maxTextureDimension1D;
           logger << "DEBUG: WebGPU adapter limits maxTextureDimension2D: " << adapter_limits.maxTextureDimension2D;
@@ -256,7 +258,7 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
           logger << "DEBUG: WebGPU adapter limits maxComputeWorkgroupSizeY: " << adapter_limits.maxComputeWorkgroupSizeY;
           logger << "DEBUG: WebGPU adapter limits maxComputeWorkgroupSizeZ: " << adapter_limits.maxComputeWorkgroupSizeZ;
           logger << "DEBUG: WebGPU adapter limits maxComputeWorkgroupsPerDimension: " << adapter_limits.maxComputeWorkgroupsPerDimension;
-        #endif // NDEBUG
+        #endif // DEBUG_WEBGPU
 
         // specify required features for the device
         std::set<wgpu::FeatureName> required_features{
@@ -337,23 +339,21 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
             {
               wgpu::SupportedFeatures device_supported_features;
               device.GetFeatures(&device_supported_features);
-              #ifndef NDEBUG
+              #ifdef DEBUG_WEBGPU
                 logger << "DEBUG: WebGPU device features count: " << device_supported_features.featureCount;
-              #endif // NDEBUG
+              #endif // DEBUG_WEBGPU
               for(size_t i{0}; i != device_supported_features.featureCount; ++i) {
                 device_features.emplace(device_supported_features.features[i]);
               }
             }
-            #ifndef NDEBUG
+            #ifdef DEBUG_WEBGPU
               for(auto const feature : device_features) {
                 logger << "DEBUG: WebGPU device features: " << magic_enum::enum_name(feature);
               }
-            #endif // NDEBUG
-            #ifndef NDEBUG
               {
                 wgpu::Limits device_limits;
-                bool result{device.GetLimits(&device_limits)};
-                logger << "DEBUG: WebGPU device limits result: " << std::boolalpha << result;
+                wgpu::Status const limits_status{device.GetLimits(&device_limits)};
+                logger << "DEBUG: WebGPU device limits status: " << enum_wgpu_name(limits_status);
                 logger << "DEBUG: WebGPU device limits nextInChain: " << device_limits.nextInChain;
                 logger << "DEBUG: WebGPU device limits maxTextureDimension1D: " << device_limits.maxTextureDimension1D;
                 logger << "DEBUG: WebGPU device limits maxTextureDimension2D: " << device_limits.maxTextureDimension2D;
@@ -386,7 +386,7 @@ void webgpu_renderer::init(std::function<void(webgpu_data const&)> &&this_postin
                 logger << "DEBUG: WebGPU device limits maxComputeWorkgroupSizeZ: " << device_limits.maxComputeWorkgroupSizeZ;
                 logger << "DEBUG: WebGPU device limits maxComputeWorkgroupsPerDimension: " << device_limits.maxComputeWorkgroupsPerDimension;
               }
-            #endif // NDEBUG
+            #endif // DEBUG_WEBGPU
           },
           &renderer
         );
